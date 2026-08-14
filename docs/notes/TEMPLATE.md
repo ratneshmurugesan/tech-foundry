@@ -14,7 +14,7 @@ After completing each day's work, create a note capturing:
 ## Naming Convention
 
 ```
-day-XX-[topic]-[yyyy-mm-dd-hh-mm].md
+day-XX-[topic]-[yyyy-mm-dd-hhmm].md
 ```
 
 - `XX` is a zero-padded day number (01, 02, 03...)
