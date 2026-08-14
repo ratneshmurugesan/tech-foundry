@@ -14,12 +14,12 @@ After completing each day's work, create a note capturing:
 ## Naming Convention
 
 ```
-day-XX-[topic].md
+day-XX-[topic]-[yyyy-mm-dd-hh-mm].md
 ```
 
 - `XX` is a zero-padded day number (01, 02, 03...)
 - `topic` is a brief kebab-case descriptor
-- Example: `day-01-types-and-async.md`, `day-03-postgres-schema.md`
+- Example: `day-01-xxxxx`
 
 ---
 
@@ -34,17 +34,9 @@ Copy the block below as `day-XX-[topic].md`:
 
 What was actually built today? List each file or component with checkboxes.
 
-- [ ] TypeScript track: file1.ts, file2.ts
-- [ ] Python track: file1.py, file2.py
-- [ ] Infrastructure: docker-compose.yml, .env
-
 ## Learned
 
 What concepts, patterns, or OSS references did you encounter?
-- DDD concept applied (Entity, Value Object, Aggregate, Bounded Context, etc.)
-- Dual-language mapping (TS concept ↔ Python equivalent)
-- OSS reference (which of the 12 repos models this pattern)
-- New tool or library learned
 
 ## Broke & Fixed
 
@@ -67,9 +59,16 @@ What couldn't be completed today and why?
 
 Key commands executed today, with outcomes. Include for reproducibility.
 
-- `pnpm install` → installed 45 packages
-- `uv sync` → resolved 12 dependencies
-- `docker compose up -d` → postgres started on port 5432
+
+## Preview of Next day
+
+Brief overview of what tomorrow covers so you can prepare mentally:
+- **What's being built**: Name the day's topic and the main deliverable
+- **Concepts**: New patterns, frameworks, or DDD concepts you'll encounter
+- **Files**: New files you'll create or existing files you'll modify
+- **Prerequisites**: Dependencies to install, services to start, or setup steps before beginning
+- **Connection**: How today's work feeds into tomorrow (e.g., "today's repository becomes tomorrow's data layer")
+
 
 ## ADRs Created
 
