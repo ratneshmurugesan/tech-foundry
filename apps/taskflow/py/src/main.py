@@ -9,15 +9,15 @@ async def main() -> None:
     project_repo = InMemoryRepository[Project]()
     issue_repo = InMemoryRepository[Issue]()
 
-    ws = Workspace(id=generate_id(), name="Test Workspace", created_at=datetime.now())
+    ws = Workspace(id=generate_id(), name="My First Workspace", created_at=datetime.now())
     await workspace_repo.save(ws)
     print(f"Created workspace: {ws.name}")
 
-    project = Project(id=generate_id(), name="Test Project", workspace_id=ws.id, created_at=datetime.now())
+    project = Project(id=generate_id(), name="Sprint Board", workspace_id=ws.id, created_at=datetime.now())
     await project_repo.save(project)
     print(f"Created project: {project.name}")
 
-    issue = Issue(id=generate_id(), title="Test Issue", project_id=project.id, status="open", created_at=datetime.now())
+    issue = Issue(id=generate_id(), title="Build Day 1", project_id=project.id, status="open", created_at=datetime.now())
     await issue_repo.save(issue)
     print(f"Created issue: {issue.title}")
 
