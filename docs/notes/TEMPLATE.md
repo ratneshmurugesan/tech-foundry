@@ -59,6 +59,17 @@ What couldn't be completed today and why?
 
 Key commands executed today, with outcomes. Include for reproducibility.
 
+> **Tip**: To reconstruct your real command history (not what you think you ran), cross-reference your shell history:
+> ```bash
+> # Get all commands from today with timestamps
+> START=$(date -d "YYYY-MM-DD 00:00:00" +%s)
+> END=$(date -d "YYYY-MM-DD 23:59:59" +%s)
+> grep -aE "^: [0-9]+:0;" ~/.zsh_history | awk -F: -v start="$START" -v end="$END" \
+>   '$2 >= start && $2 <= end {cmd=$3; gsub(/\\$/,"",cmd); print $2, cmd}' | \
+>   while read ts cmd; do dt=$(date -d "@$ts" "+%H:%M"); echo "$dt | $cmd"; done
+> ```
+> Collapse repetitive retries into grouped entries. Keep the story, drop the noise.
+
 
 ## Preview of Next day
 
