@@ -90,6 +90,10 @@ Python `delete(entity: T)` took a full entity object, while TypeScript `delete(i
 `main()` at the bottom of `main.ts` was called without `await`, meaning unhandled promise rejections would be silently swallowed.
 **Fix**: Changed to `await main()` at top level.
 
+### SSH Key / Git Push Failure
+`git push origin dev` failed with SSH permission denied — the SSH config had the wrong host alias.
+**Fix**: Ran `ssh -T git@github.com` to diagnose, then `nano ~/.ssh/config` to fix the config, then `git push origin dev` succeeded.
+
 ## Blocked / Deferred
 
 - **Deferred to Day 3**: PostgreSQL schema, Drizzle ORM, real persistence layer.
@@ -98,36 +102,56 @@ Python `delete(entity: T)` took a full entity object, while TypeScript `delete(i
 
 ## Commands Run
 
-### The Real Journey (chronological)
+### Python Environment Setup (09:04 – 09:32)
 
 | Time | Command | Outcome |
 |---|---|---|
-| 09:04 | `python -m pip install pydantic` | ❌ No `python` binary |
-| 09:06 | `sudo apt install python3.12-venv` | ✅ venv package installed |
-| 09:30 | `sudo apt install python3-venv python3-full -y` | ✅ Full Python toolchain |
-| 09:30 | `python3 -m venv .venv` → `source .venv/bin/activate` → `pip install pydantic` | ✅ Working (then ripped out) |
-| 12:35 | `rm -rf bin include lib lib64 pyvenv.cfg` | Cleaned old venv (×3 across dirs) |
-| 13:06 | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | ✅ uv installed |
-| 13:11 | `uv venv` → `uv sync` → `uv run python3 -m src.main` | ✅ Python track working (4 iterations) |
-| 13:55 | `npm i -g pnpm` | ✅ pnpm installed |
-| 13:58 | `pnpm init` → `pnpm install -D tsx typescript` | ✅ Project scaffolded |
-| 14:00 | `npx tsc --init` | ✅ tsconfig.json created |
-| 15:04 | `npm install -g tsx` | ✅ tsx installed globally |
+| 09:04–09:11 | `python -m pip install pydantic` → `python3 -m pip install pydantic` → `sudo apt install python3.12-venv` → `sudo apt install python3-pip` → `sudo apt install python3-full` | ❌ 5 attempts, all failed — pip/venv broken |
+| 09:30 | `sudo apt install python3-venv python3-full -y` | ✅ Both packages together finally worked |
+| 09:30 | `python3 -m venv .venv` → `source .venv/bin/activate` → `pip install pydantic` | ✅ First working env |
+| 09:32 | `deactivate` → `rm -rf bin include lib lib64 pyvenv.cfg` | Ripped out — switching to uv |
+
+### Switching to uv (12:26 – 13:22)
+
+| Time | Command | Outcome |
+|---|---|---|
+| 12:26 | `cd tech-foundry/apps/taskflow/py` | Navigated to project |
+| 12:28–12:37 | `rm -rf bin include lib lib64 pyvenv.cfg` (×3 across different dirs) | Cleaned old venvs everywhere |
+| 12:38–12:41 | `pip install .` → `pip install -e .` | ❌ No pyproject.toml yet |
+| 13:06 | `pip install uv` → `pip uninstall uv` | Wrong method — uninstalled |
+| 13:10 | `curl -LsSf https://astral.sh/uv/install.sh \| sh` | ✅ uv installed properly |
+| 13:12–13:22 | `uv venv` → `uv sync` → `uv run python3 -m src.main` (×4) | 4 iterations fixing types, imports, repo API |
+
+### TypeScript Track Setup (13:54 – 15:08)
+
+| Time | Command | Outcome |
+|---|---|---|
+| 13:55 | `npm i -g pnpm` → `pnpm init` | ✅ pnpm + package.json |
+| 13:58 | `pnpm install -D tsx typescript` | ✅ Dev deps added |
+| 14:00 | `pnpm approve-builds` | ✅ Native builds approved |
+| 14:06 | `npx tsc --init` | ✅ tsconfig.json created |
+| 14:58–15:04 | `pnpm dev` → `npx install -g tsx` → `npm install -g tsx` | ❌ tsx not found, wrong syntax, then ✅ |
 | 15:06 | `rm -rf node_modules pnpm-lock.yaml && pnpm install` | ✅ Clean reinstall |
-| 15:08 | `pnpm approve-builds esbuild` | ✅ Native build approved |
-| 15:08 | `pnpm dev` | ✅ TS track working |
+| 15:08 | `pnpm approve-builds esbuild` → `pnpm dev` | ✅ esbuild approved, TS working |
+
+### Final Verification & Push (15:09 – 15:15)
+
+| Time | Command | Outcome |
+|---|---|---|
+| 15:09 | `uv venv` → `uv sync` | ✅ Python env ready |
 | 15:10 | `uv run python -m src.main` | ✅ Python track verified |
+| 15:13 | `git push origin dev` | ❌ SSH permission denied |
+| 15:13–15:14 | `ssh -T git@github.com` → `nano ~/.ssh/config` | Fixed SSH host alias |
 | 15:15 | `git push origin dev` | ✅ Pushed to GitHub |
 
-### Final Working Commands (the ones that matter)
+### The Working Commands (reference)
 
-| Command | Track | Outcome |
+| Command | Track | What it does |
 |---|---|---|
-| `pnpm dev` | TS | ✅ 6 log lines printed, "COMPLETE" |
-| `npx tsc --noEmit` | TS | ✅ Zero type errors, clean exit |
-| `uv venv` | Python | ✅ Virtual environment created |
-| `uv sync` | Python | ✅ pydantic installed, lockfile created |
-| `uv run python -m src.main` | Python | ✅ 5 log lines printed, "COMPLETE" |
+| `pnpm dev` | TS | Run TypeScript entry point |
+| `npx tsc --noEmit` | TS | Type check without emitting |
+| `uv sync` | Python | Install/update dependencies from pyproject.toml |
+| `uv run python -m src.main` | Python | Run Python entry point |
 
 ## ADRs Created
 
