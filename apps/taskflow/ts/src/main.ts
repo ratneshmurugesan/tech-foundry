@@ -53,4 +53,4 @@ async function main() {
     console.log("Day 1 TypeScript track: COMPLETE");
 }
 
-main()
+await main();

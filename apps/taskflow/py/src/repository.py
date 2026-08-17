@@ -20,7 +20,6 @@ class InMemoryRepository(Generic[T]):
         entity_id = str(getattr(entity, "id"))
         self.__storage[entity_id] = entity
 
-    async def delete(self, entity: T) -> bool:
-        entity_id = str(getattr(entity, "id"))
-        removed_entity = self.__storage.pop(str(entity_id), None)
-        return removed_entity  is not None
+    async def delete(self, id: str) -> bool:
+        removed_entity = self.__storage.pop(str(id), None)
+        return removed_entity is not None
