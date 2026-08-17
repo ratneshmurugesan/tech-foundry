@@ -15,8 +15,10 @@ Every entity needs a unique identifier. The choice of ID strategy affects:
 ## Decision
 
 **Day 1 (make it work)**:
-- **TypeScript**: `Date.now().toString(36) + Math.random().toString(36).slice(2)` — timestamp-based, short, good enough for in-memory
+- **TypeScript**: `crypto.randomUUID()` — native Node.js API, collision-resistant, no extra deps
 - **Python**: `str(uuid4())` — standard library, collision-resistant, no extra deps
+
+Both tracks converged on the same strategy. The original plan for a timestamp-based TS ID was abandoned in favor of consistency.
 
 **Phase 2 (make it right, Deepening 1)**:
 - **Both tracks**: ULID (Universally Unique Lexicographically Sortable Identifier)
@@ -26,10 +28,10 @@ Every entity needs a unique identifier. The choice of ID strategy affects:
 
 ## Consequences
 
-**Day 1 shortcut trade-offs**:
-- TS timestamp+random IDs are sortable (timestamp prefix) but have collision risk under high concurrency
-- Python uuid4 is collision-resistant but NOT sortable
-- Inconsistency between tracks is acceptable for Day 1 — both will converge on ULID in Phase 2
+**Day 1 trade-offs**:
+- Both tracks use uuid4 — collision-resistant but NOT sortable
+- Consistency between tracks is achieved from day one
+- The ULID upgrade path remains the same for Phase 2
 
 **ULID upgrade benefits**:
 - Single ID format across both languages

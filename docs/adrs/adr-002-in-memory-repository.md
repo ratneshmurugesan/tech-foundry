@@ -18,6 +18,8 @@ Use **in-memory collections** as the persistence layer for Days 1-2:
 
 Each service owns its own collection (no shared database).
 
+The `save()` method includes a simulated async delay (`setTimeout` in TS, `asyncio.sleep` in Python) to mimic real I/O latency. This ensures the async pattern is exercised even with in-memory storage.
+
 ## Consequences
 
 **Positive**:

@@ -15,7 +15,7 @@ Rather than picking one and missing the other, the roadmap proposes a **dual-lan
 - **TypeScript 60%** — depth, frontend, full-stack, Next.js, Drizzle ORM
 - **Python 40%** — backend, async, FastAPI, Pydantic
 - Same domain model, same patterns, two implementations side by side
-- Folder structure: `taskflow/ts/` and `taskflow/py/` in parallel
+- Folder structure: `apps/taskflow/ts/` and `apps/taskflow/py/` in parallel
 
 ## Consequences
 
