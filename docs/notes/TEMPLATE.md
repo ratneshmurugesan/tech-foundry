@@ -69,6 +69,8 @@ Key commands executed today, with outcomes. Include for reproducibility.
 >   while read ts cmd; do dt=$(date -d "@$ts" "+%H:%M"); echo "$dt | $cmd"; done
 > ```
 > Collapse repetitive retries into grouped entries. Keep the story, drop the noise.
+> Look for commands executed within /media/ratnesh-murugesan/PRO/Professional/ratnesh-vault/repos/foundry/ is possible
+
 
 
 ## Preview of Next day
