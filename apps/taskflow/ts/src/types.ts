@@ -1,17 +1,17 @@
-interface Workspace {
+export interface Workspace {
     id: string;
     name: string;
     created_at: Date;
 }
 
-interface Project {
+export interface Project {
     id: string;
     workspace_id: string;
     name: string;
     created_at: Date;
 }
 
-interface Issue {
+export interface Issue {
     id: string;
     project_id: string;
     title: string;

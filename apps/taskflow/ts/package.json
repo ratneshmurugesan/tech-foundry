@@ -10,5 +10,9 @@
   "devDependencies": {
     "tsx": "^4.7.0",
     "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.8.1",
+    "fastify": "^5.12.0"
   }
 }

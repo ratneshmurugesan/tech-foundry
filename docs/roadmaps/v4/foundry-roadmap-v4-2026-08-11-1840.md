@@ -771,10 +771,6 @@ We move on: Next deepening
 2. **Start Sprint 1 Day 1** — TypeScript discriminated union + Python Pydantic (one day, not a week)
 3. **Ship by Day 7** — Deployed URL, accessible from phone
 
-### Pending Decisions:
-- Time commitment pace (full pace / reduced / weekend warrior)
-- Month 3-4 language choice for API (Python FastAPI vs TypeScript Fastify) — can decide during Sprint 1
-
 ---
 
 *End of roadmap. Make it work, make it right, make it fast.*
