@@ -1,28 +1,26 @@
 from fastapi import FastAPI
-from .repository import InMemoryRepository
+from .repository import PostgresRepository
 from .types import Workspace, Project, Issue
-from .ids import generate_id
 from typing import List 
 
-app = FastAPI(title="Taskflow API - Day 2 skeleton")
+app = FastAPI(title="Taskflow API - Day 3 with PostgreSQL")
 
-workspace_repo = InMemoryRepository[Workspace]()
-project_repo = InMemoryRepository[Project]()
-issue_repo = InMemoryRepository[Issue]()
-
+repo = PostgresRepository()
 
 @app.get("/workspaces")
 async def get_workspaces() -> List[Workspace]:
-    return await workspace_repo.findAll()
+    return await repo.findAllWorkspaces()
 
 @app.get("/projects")
 async def get_projects() -> List[Project]:
-    return await project_repo.findAll()
+    return await repo.findAllProjects()
 
 @app.get("/issues")
 async def get_issues() -> List[Issue]:
-    return await issue_repo.findAll()
+    return await repo.findAllIssues()
 
 @app.on_event("startup")
 async def startup() -> None:
-    print(f"Taskflow API running on port 8000")
+    from .db import init_db
+    await init_db()
+    print("Taskflow API running on port 8001")

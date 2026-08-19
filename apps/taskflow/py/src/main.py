@@ -1,9 +1,10 @@
-from uvicorn import run
+from uvicorn import run as uvicorn_run
 from .server import app
 
 def main() -> None:
-    run(app, host="0.0.0.0", port=8000)
-    print(f"Day 2 Python track: COMPLETE")
+    # init_db() is handled by FastAPI's startup event in server.py
+    uvicorn_run(app, host="0.0.0.0", port=8001)
+    print(f"Day 3 Python track: COMPLETE")
 
 if __name__ == "__main__":
     main()
