@@ -1,7 +1,8 @@
 # ADR-002: In-Memory Repository for Phase 1
 
-**Status**: Active (temporary — superseded by ADR on Day 3)
+**Status**: Superseded by ADR-005
 **Date**: 2026-08-12
+**Superseded**: 2026-08-19 (Day 3 — PostgreSQL + ORM)
 **Phase**: Phase 1 — Make it Work, Sprint 1, Day 1-2
 
 ## Context
