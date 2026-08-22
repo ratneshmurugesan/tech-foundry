@@ -1,29 +1,8 @@
-
-// class InMemoryRepository<T extends { id: string }> {
-//     private storage: Map<string, T> = new Map();
-
 import { eq } from "drizzle-orm";
 import { getDb, issues, projects, workspaces } from "./db";
 import { Issue, Project, Workspace } from "./types";
 import generateId from "./ids";
 
-//     async findAll(): Promise<Array<T>> {
-//         return Array.from(this.storage.values());
-//     }
-
-//     async findById(id: string): Promise<T | undefined> {
-//         return this.storage.get(id) || undefined;
-//     }
-
-//     async save(entity: T): Promise<void> {
-//         await new Promise(resolve => setTimeout(resolve, 1000));
-//         this.storage.set(String(entity.id), entity);
-//     }
-
-//     async delete(id: string): Promise<boolean> {
-//         return this.storage.delete(id);
-//     }
-// }
 
 class PostgresRepository {
 
@@ -66,8 +45,22 @@ class PostgresRepository {
         }
     }
 
+    async updateWorkspace(id: string, changes: Partial<Workspace>): Promise<Workspace | undefined> {
+        const db = getDb()
+
+        const row = await db
+            .update(workspaces)
+            .set(changes)
+            .where(eq(workspaces.id, id))
+            .returning();
+
+        return row[0] ?? undefined
+    }
+
+
     async deleteWorkspace(id: string): Promise<boolean> {
         const db = getDb()
+
         const rows = await db
             .delete(workspaces)
             .where(eq(workspaces.id, id))
@@ -119,6 +112,23 @@ class PostgresRepository {
         }
     }
 
+    async updateProject(id: string, changes: Partial<Project>): Promise<Project | undefined> {
+        const db = getDb()
+
+        const rows = await db
+            .update(projects)
+            .set(changes)
+            .where(eq(projects.id, id))
+            .returning();
+
+        return !!rows.length ? {
+            id: rows[0].id,
+            workspace_id: rows[0].workspace_id as string,
+            name: rows[0].name,
+            created_at: rows[0].created_at as Date
+        } : undefined
+    }
+
     async deleteProject(id: string): Promise<boolean> {
         const db = getDb()
         const rows = await db
@@ -157,13 +167,13 @@ class PostgresRepository {
         } : undefined
     }
 
-    async saveIssue(project_id: string, title: string, status: "open" | "closed"): Promise<Issue> {
+    async saveIssue(project_id: string, title: string, status?: "open" | "closed"): Promise<Issue> {
         const db = getDb()
         const id = generateId()
 
         const rows = await db
             .insert(issues)
-            .values({ id, project_id, title, status: status || "open" })
+            .values({ id, project_id, title, status })
             .returning();
 
         return {
@@ -171,8 +181,27 @@ class PostgresRepository {
             project_id: rows[0].project_id as string,
             title: rows[0].title,
             status: rows[0].status as "open" | "closed",
-            created_at: rows[0].created_at as Date
+            created_at: rows[0].created_at
         }
+    }
+
+    async updateIssue(id: string, changes: Partial<Issue>): Promise<Issue | undefined> {
+        const db = getDb()
+
+        const rows = await db
+            .update(issues)
+            .set(changes)
+            .where(eq(issues.id, id))
+            .returning();
+
+        return !!rows.length ?
+            {
+                id: rows[0].id,
+                project_id: rows[0].project_id as string,
+                title: rows[0].title,
+                status: rows[0].status as "open" | "closed",
+                created_at: rows[0].created_at
+            } : undefined
     }
 
     async deleteIssue(id: string): Promise<boolean> {
