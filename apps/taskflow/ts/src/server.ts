@@ -234,6 +234,20 @@ app.patch("/projects/:id", {
     const { id } = request.params
     const changes = request.body
 
+    let existingWorkspace;
+
+    try {
+        existingWorkspace = await repo.findWorkspaceById(changes.workspace_id!)
+    } catch (dbError) {
+        // 500 Error: Hidden from user, fully logged internally
+        throw new DatabaseCrashError(dbError);
+    }
+
+    // 404 Error: Safe semantic error
+    if (!existingWorkspace) {
+        throw new NotFoundError(`Workspace with ID ${id} does not exist`)
+    }
+
     let existingProject;
     try {
         existingProject = await repo.findProjectById(id)
