@@ -16,7 +16,7 @@ class ProjectModel(Base):
     __tablename__ = "projects"
 
     id = Column(String(36), primary_key=True)
-    workspace_id = Column(String(36), ForeignKey("workspaces.id"))
+    workspace_id = Column(String(36), ForeignKey("workspaces.id", ondelete='cascade'))
     name = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=text("now()"))
 
@@ -24,7 +24,7 @@ class IssueModel(Base):
     __tablename__ = "issues"
 
     id = Column(String(36), primary_key=True)
-    project_id = Column(String(36), ForeignKey("projects.id"))
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete='cascade'))
     title = Column(String, nullable=False)
     status = Column(String, server_default="open")
     created_at = Column(DateTime, server_default=text("now()"))

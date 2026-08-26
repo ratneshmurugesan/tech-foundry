@@ -1,10 +1,9 @@
 from typing import List, Optional
 from .db import get_session
 from .models import WorkspaceModel, ProjectModel, IssueModel
-from .types import Workspace, Project, Issue
+from .types import Workspace, UpdateWorkspace, Project, UpdateProject, Issue, UpdateIssue
 from .ids import generate_id
-from sqlalchemy import select
-from contextlib import asynccontextmanager
+from sqlalchemy import select, update
 
 """
 PostgresRepository — replaces InMemoryRepository.
@@ -13,7 +12,7 @@ PostgresRepository — replaces InMemoryRepository.
 class PostgresRepository:
     """--- Workspaces ---"""
 
-    async def findAllWorkspaces(self) -> List[Workspace]:
+    async def find_all_workspaces(self) -> List[Workspace]:
         session = await get_session()
         try:
             result = await session.execute(select(WorkspaceModel))
@@ -22,7 +21,7 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def findWorkspaceById(self, id: str) -> Optional[Workspace]:
+    async def find_workspace_by_id(self, id: str) -> Optional[Workspace]:
         session = await get_session()
         try:
             result = await session.execute(select(WorkspaceModel).where(WorkspaceModel.id == id))
@@ -31,7 +30,7 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def saveWorkspace(self, name: str) -> Workspace:
+    async def save_workspace(self, name: str) -> Workspace:
         session = await get_session()
         try:
             model = WorkspaceModel(id=generate_id(), name=name)
@@ -42,7 +41,22 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def deleteWorkspace(self, id: str) -> bool:
+    async def update_workspace(self, id: str, changes: UpdateWorkspace) -> Workspace:
+        partial = changes
+        session = await get_session()
+        try:
+            # model = WorkspaceModel()
+            partial = {
+                k: v for k,v in changes.items() if v is not None
+            }
+            await session.execute(update(WorkspaceModel).where(WorkspaceModel.id == id).values(**partial))
+            await session.commit()
+            row = await session.get(WorkspaceModel, id)
+            return Workspace.model_validate(row) if row else None 
+        finally:
+            await session.close()
+
+    async def delete_workspace(self, id: str) -> bool:
         session = await get_session()
         try:
             row = await session.get(WorkspaceModel, id)
@@ -56,7 +70,7 @@ class PostgresRepository:
 
     """--- Projects ---"""
 
-    async def findAllProjects(self) -> List[Project]:
+    async def find_all_projects(self) -> List[Project]:
         session = await get_session()
         try:
             result = await session.execute(select(ProjectModel))
@@ -65,7 +79,7 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def findProjectById(self, id: str) -> Optional[Project]:
+    async def find_project_by_id(self, id: str) -> Optional[Project]:
         session = await get_session()
         try:
             row = await session.get(ProjectModel, id)
@@ -73,7 +87,7 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def saveProject(self, workspace_id: str, name: str) -> Project:
+    async def save_project(self, workspace_id: str, name: str) -> Project:
         session = await get_session()
         try:
             model = ProjectModel(id=generate_id(), workspace_id=workspace_id, name=name)
@@ -84,7 +98,21 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def deleteProject(self, id:str) -> bool:
+    async def update_project(self, id: str, changes: UpdateProject) -> Project:
+        session = await get_session()
+        try:
+            # model = ProjectModel()
+            partial = {
+                k: v for k,v in changes.items() if v is not None
+            }
+            await session.execute(update(ProjectModel).where(ProjectModel.id == id).values(**partial))
+            await session.commit()
+            row = await session.get(ProjectModel, id)
+            return Project.model_validate(row) if row else None 
+        finally:
+            await session.close()
+
+    async def delete_project(self, id:str) -> bool:
         session = await get_session()
         try:
             row = await session.get(ProjectModel, id)
@@ -96,7 +124,7 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def findAllIssues(self) -> List[Issue]:
+    async def find_all_issues(self) -> List[Issue]:
         session = await get_session()
         try:
             result = await session.execute(select(IssueModel))
@@ -105,7 +133,7 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def findIssueById(self, id: str) -> Optional[Issue]:
+    async def find_issue_by_id(self, id: str) -> Optional[Issue]:
         session = await get_session()
         try:
             row = await session.get(IssueModel, id)
@@ -113,7 +141,7 @@ class PostgresRepository:
         finally:
             await session.close()
     
-    async def saveIssue(self, project_id: str, title: str, status: str = "open") -> Issue:
+    async def save_issue(self, project_id: str, title: str, status: str = "open") -> Issue:
         session = await get_session()
         try:
             model = IssueModel(id=generate_id(), project_id=project_id, title=title, status=status)
@@ -124,7 +152,21 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def deleteIssue(self, id: str) -> bool:
+    async def update_issue(self, id: str, changes: UpdateIssue) -> Issue:
+        session = await get_session()
+        try:
+            # model = IssueModel()
+            partial = {
+                k: v for k,v in changes.items() if v is not None
+            }
+            await session.execute(update(IssueModel).where(IssueModel.id == id).values(**partial))
+            await session.commit()
+            row = await session.get(IssueModel, id)
+            return Issue.model_validate(row) if row else None 
+        finally:
+            await session.close()
+
+    async def delete_issue(self, id: str) -> bool:
         session = await get_session()
         try:
             row = await session.get(IssueModel, id)
