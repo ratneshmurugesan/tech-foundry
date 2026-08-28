@@ -21,6 +21,9 @@ out/
 build/
 *.tsbuildinfo
 
+# Drizzle push journal (throwaway snapshots — src/db.ts is the source of truth)
+drizzle/
+
 # Logs
 logs
 *.log

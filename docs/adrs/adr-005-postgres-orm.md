@@ -55,6 +55,11 @@ No migration tooling yet. Alembic is installed (`uv add --dev alembic`) but defe
 - **Pydantic bridge**: `Model.model_validate(row)` converts SQLAlchemy rows to Pydantic types
 - **Session lifecycle**: async sessions must be explicitly closed in `finally:` blocks to prevent connection leaks
 
+## Field Notes (Day 3 → 4)
+
+- **The Drizzle journal is throwaway local state.** `drizzle-kit push` writes snapshots under `./drizzle/` (the `out` config). It is not source — added to `.gitignore` (Day 4). If the DB drifts unrepairable, the working reset sequence is: drop the schema's tables, `rm -rf drizzle/`, `pnpm db:push` — `src/db.ts` is the source of truth and regenerates both journal and tables. (Session 08-24 reconstruction: the *drop* step required a temp drizzle config with an empty table list + `push --force`, because **`drizzle-kit drop` does not exist** in kit 0.22 and there was no `db:drop` script.)
+- **DDL authority differs by track.** TS schema changes take effect only after `pnpm db:push` against the *running* DB; PY schema changes take effect only after a full container rebuild (since `create_all()` doesn't ALTER). The Day 4 cascade FK needed exactly one of each — the asymmetry is the reason the shared-DB setup keeps biting.
+
 ## References
 
 - ADR-002: In-Memory Repository (superseded)

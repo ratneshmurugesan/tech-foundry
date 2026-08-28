@@ -29,12 +29,18 @@ Both language tracks connect to the same container — same DB, same data, diffe
 
 **Negative**:
 - Docker dependency — developer must have Docker installed (acceptable for this project)
-- No persistent volume yet — data is lost on `docker compose down` (will add `volumes:` when needed)
+- No *named* volume in compose yet — data lifecycle follows the **anonymous** volume Docker auto-creates from the postgres image's `VOLUME` declaration: `down` keeps it, `down -v` / `prune` wipe it (see Field Notes for the correction)
 - Slightly slower than native PostgreSQL — negligible for dev, not a concern yet
 
 **Mitigation**:
 - Roadmap Sprint 1 Day 5: "Docker Compose (Postgres + app)" — full Dockerization of app containers too
 - Deepening Pass 1 (Weeks 7-10): proper Docker images, volume mounts, production-ready compose
+
+## Field Notes (Day 3 → 4)
+
+- The "no volume" state is an **anonymous volume** auto-created by the postgres image's `VOLUME` instruction — data survives `down`, dies with `down -v` / `docker system prune`, and is invisible in `compose config`. The Day 3 note's "data is lost on `docker compose down`" was wrong; the compose file has never declared a volume. **Day 5 decision pending: switch to a named volume** so the behavior is explicit, visible, and survives the app containers coming on board.
+- **Stable reset recipe** (verified repeatedly 08-21 → 08-24): `docker compose down` → `up` → `pnpm db:push`. Safe even against an existing DB — push is idempotent. Use the `down -v` variant whenever a schema/DDL change must actually apply (Day 4's cascade FK required it, because `create_all` can't ALTER).
+- **Verify-from-inside**: `docker compose exec -T postgres psql -U postgres -d taskflow -c '\d projects'` is the ground truth for live constraints when client behavior is suspicious.
 
 ## References
 

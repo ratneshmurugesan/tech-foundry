@@ -83,8 +83,6 @@ What is the change we're proposing or have agreed to?
 - Related ADRs (ADR-XXX, ADR-YYY)
 ```
 
----
-
 ## Existing ADRs
 
 | ADR | Title | Status |
