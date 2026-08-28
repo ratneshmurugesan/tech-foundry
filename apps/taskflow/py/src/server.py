@@ -86,13 +86,22 @@ async def get_projects() -> List[Project]:
         raise DatabaseCrashError(db_error)
 @app.post("/projects", response_model=Project, status_code=201)
 async def create_projects(body: CreateProject) -> Project:
-    new_ws: Workspace
+    existing_ws: Workspace
     try:
-        new_ws = await repo.save_project(workspace_id=body.workspace_id, name=body.name)
+        existing_ws = await repo.find_workspace_by_id(body.workspace_id)
     except Exception as db_error:
         raise DatabaseCrashError(db_error)
 
-    return new_ws
+    if not existing_ws:
+         raise NotFoundError(f"Workspace with ID {body.workspace_id} does not exist")
+
+    new_project: Project
+    try:
+        new_project = await repo.save_project(workspace_id=body.workspace_id, name=body.name)
+    except Exception as db_error:
+        raise DatabaseCrashError(db_error)
+
+    return new_project
 @app.get("/projects/{id}", response_model=Project, status_code=200)
 async def get_projects(id: str  = Path(..., description="The ID of item")) -> Project:
 
@@ -115,7 +124,17 @@ async def patch_projects(id: str, body: UpdateProject):
         raise DatabaseCrashError(db_error)
 
     if not exisiting_project:
-         raise NotFoundError(f"Project with ID{id} does not exist")
+         raise NotFoundError(f"Project with ID {id} does not exist")
+
+    # A PATCH that moves the project into another workspace must name an existing workspace
+    incoming_ws = body.model_dump(exclude_unset=True).get("workspace_id")
+    if incoming_ws is not None:
+        try:
+            destination_ws = await repo.find_workspace_by_id(incoming_ws)
+        except Exception as db_error:
+            raise DatabaseCrashError(db_error)
+        if not destination_ws:
+            raise NotFoundError(f"Workspace with ID {incoming_ws} does not exist")
 
     updated_project = await repo.update_project(id, body.model_dump(exclude_unset=True))
     return updated_project
@@ -137,7 +156,7 @@ async def delete_projects(id: str = Path(..., description="The ID of item")):
         raise DatabaseCrashError(db_error)
 
     if is_deleted is None:
-         raise Exception(f"Project with ID {id} does not exist")
+         raise NotFoundError(f"Project with ID {id} does not exist")
 
     return is_deleted
 
@@ -159,7 +178,7 @@ async def create_issues(body: CreateIssue) -> Issue:
         raise DatabaseCrashError(db_error)
 
     if not existing_project:
-         raise NotFoundError(f"Project with ID {id} does not exist")
+         raise NotFoundError(f"Project with ID {body.project_id} does not exist")
     
     data = await repo.save_issue(body.project_id, body.title, body.status)
     return data
@@ -202,7 +221,7 @@ async def delete_issues(
         raise DatabaseCrashError(db_error)
 
     if not existing_issue:
-         raise NotFoundError(f"Issue with ID q  {id} does not exist")
+         raise NotFoundError(f"Issue with ID {id} does not exist")
 
     is_deleted = False
     try:

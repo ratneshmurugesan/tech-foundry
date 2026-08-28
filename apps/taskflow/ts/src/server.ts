@@ -176,6 +176,9 @@ app.post("/projects", {
         body: CreateProjectSchema,
         response: {
             201: projectSchema,
+            404: z.object({
+                error: z.string()
+            }),
             500: z.object({
                 error: z.string()
             })
@@ -183,12 +186,25 @@ app.post("/projects", {
     }
 }, async (request, response) => {
     const { workspace_id, name } = request.body
+
+    // Parent reference must exist — a missing workspace is a 404, not an FK blow-up
+    let existingWorkspace;
     try {
-        const data = await repo.saveProject(workspace_id, name)
-        return response.code(201).send(data)
+        existingWorkspace = await repo.findWorkspaceById(workspace_id)
     } catch (dbError) {
         throw new DatabaseCrashError(dbError)
     }
+    if (!existingWorkspace) {
+        throw new NotFoundError(`Workspace with ID ${workspace_id} does not exist`)
+    }
+
+    let data;
+    try {
+        data = await repo.saveProject(workspace_id, name)
+    } catch (dbError) {
+        throw new DatabaseCrashError(dbError)
+    }
+    return response.code(201).send(data)
 })
 app.get("/projects/:id", {
     schema: {
@@ -234,18 +250,19 @@ app.patch("/projects/:id", {
     const { id } = request.params
     const changes = request.body
 
-    let existingWorkspace;
-
-    try {
-        existingWorkspace = await repo.findWorkspaceById(changes.workspace_id!)
-    } catch (dbError) {
-        // 500 Error: Hidden from user, fully logged internally
-        throw new DatabaseCrashError(dbError);
-    }
-
-    // 404 Error: Safe semantic error
-    if (!existingWorkspace) {
-        throw new NotFoundError(`Workspace with ID ${id} does not exist`)
+    // Only validate the destination workspace if the request is actually moving the project
+    if (changes.workspace_id) {
+        let existingWorkspace;
+        try {
+            existingWorkspace = await repo.findWorkspaceById(changes.workspace_id)
+        } catch (dbError) {
+            // 500 Error: Hidden from user, fully logged internally
+            throw new DatabaseCrashError(dbError);
+        }
+        // 404 Error: Safe semantic error
+        if (!existingWorkspace) {
+            throw new NotFoundError(`Workspace with ID ${changes.workspace_id} does not exist`)
+        }
     }
 
     let existingProject;
@@ -320,6 +337,9 @@ app.post("/issues", {
         body: CreateIssueSchema,
         response: {
             201: issueSchema,
+            404: z.object({
+                error: z.string()
+            }),
             500: z.object({
                 error: z.string()
             })
@@ -328,12 +348,24 @@ app.post("/issues", {
 }, async (request, response) => {
     const { project_id, status, title } = request.body
 
+    // Parent reference must exist — a missing project is a 404, not an FK blow-up
+    let existingProject;
     try {
-        const data = await repo.saveIssue(project_id, title, status)
-        return response.code(201).send(data)
+        existingProject = await repo.findProjectById(project_id)
     } catch (dbError) {
         throw new DatabaseCrashError(dbError)
     }
+    if (!existingProject) {
+        throw new NotFoundError(`Project with ID ${project_id} does not exist`)
+    }
+
+    let data;
+    try {
+        data = await repo.saveIssue(project_id, title, status)
+    } catch (dbError) {
+        throw new DatabaseCrashError(dbError)
+    }
+    return response.code(201).send(data)
 })
 app.get("/issues/:id", {
     schema: {
