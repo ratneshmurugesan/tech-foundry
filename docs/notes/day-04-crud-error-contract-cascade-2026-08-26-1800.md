@@ -24,6 +24,7 @@
 - **`PATCH` is a semantics bug magnet.** The TS `patch_project` route validated a *workspace* (not the project) before a workspace change — a copy-paste of the workspace route, force-unwrapping an optional field. Partial update on an entity with an FK is the day's core DDD-adjacent trap: "which field am I moving, and does that *destination* exist?" The answer both trackers settled on: validate the *destination*, but only when that field is actually in the payload.
 - **Cascade = one line in the schema, zero lines in the service.** `{ onDelete: 'cascade' }` / `ondelete='cascade'` replaces an entire multi-statement transaction. Roadmap said "no transactions" — the database gave us the safe behavior anyway. That's the point of pushing invariants down.
 - **Global exception handlers double-edged**: they make 500s safe, but they also make *your own* Python bugs (NameError, NoneType) look like "something unexpected". The server log is the only truth.
+- **Shell verification hygiene**: in ad-hoc validation scripts, never truncate the *same* variable that a later `jq` extraction reads — truncation once clobbered the `.id` extraction, making a cascade check "pass" vacuously (the witness row never existed). Keep the full body (for `jq`) and the display copy as separate variables.
 - **`ON DELETE CASCADE` requires the constraint to exist in the live DB.** PY's `Base.metadata.create_all()` *creates* tables but does not *alter* existing `FOREIGN KEY` constraints — Day 3's tables keep the old non-cascade FK until the DB is rebuilt. Drizzle's `db:push` does reconcile DDL. This is a concrete ADR-005 negative, now with real teeth.
 - **`z.infer` vs interface duplication**: TS now keeps Zod schemas (`server.ts`) *and* TS interfaces (`types.ts`) for every Create/Update/Read type. Two sources of truth. Phase 2: `export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>`.
 
@@ -38,10 +39,10 @@
 | `delete_issues` 404 message contained the `"q"` placeholder | `py/src/server.py` | me, Day 4 | ✅ Fixed — now renders `Issue with ID {id}` |
 | TS `patch_project` validated the *workspace* (wrong resource) and force-unwrapped the optional `workspace_id!` | `ts/src/server.ts` | me, Day 4 | ✅ Fixed — validates only when `workspace_id` is in the body, and reports the right entity |
 | 2 of my original flags were **false positives** — `update_workspace` and the project routes *do* take `id` as a route param, so those f-strings were always bound | `py/src/server.py` | self-correction | ⚑ Retracted after diffing against git |
-| Cascade FK not applied to existing Py tables (`create_all` doesn't ALTER) | `py/src/db.py` | Day 3 | ✅ Closed — DB rebuilt (`down -v` → `up -d`), cascade verified live on PY (checks 11+12) |
+| Cascade FK not applied to existing Py tables (`create_all` doesn't ALTER) | `py/src/db.py` | Day 3 | ✅ Closed — DB rebuilt (`down -v` → `up -d`), cascade verified live on PY (child rows gone after the workspace delete) |
 | 409 `ConflictError` unused (no duplicate rule defined) | both | — | ⚪ Intentional (Phase 2) |
 | `@app.on_event` deprecation | `py/src/server.py` | — | ⚪ Deferred (lifespan, Phase 2) |
-| TS `create_project` had no workspace parent check — a bad `workspace_id` hit the FK, got sanitized to a bare 500 (PY already 404s); TS `create_issue` had the same gap for `project_id` | `ts/src/server.ts` | me, final matrix run vs the now-correct PY | ✅ Fixed — parent lookup → 404, `404` added to response schemas. Both trackers now fully symmetric |
+| TS `create_project` had no workspace parent check — a bad `workspace_id` hit the FK, got sanitized to a bare 500 (PY already 404s); TS `create_issue` had the same gap for `project_id` | `ts/src/server.ts` | me, final cross-track verification pass vs the now-correct PY | ✅ Fixed — parent lookup → 404, `404` added to response schemas. Both trackers now fully symmetric |
 
 Net of the test suite pass: **five real code bugs were fixed** (three I missed the first time — the `Exception` raise, the missing `create_projects` parent check, the missing `patch_projects` destination check — plus two retracted false positives). The global 500 handler did its job by staying silent and safe, which is exactly why these were the hard ones to surface. The final verification pass then surfaced **one more real gap on the *other* track** — the asymmetry audit was exactly worth it — and the only open item left, the **DB rebuild**, is now closed and verified (below).
 
@@ -50,7 +51,7 @@ Net of the test suite pass: **five real code bugs were fixed** (three I missed t
 - ~~**DB rebuild** to activate PY cascade + apply FKs (`docker compose down -v` → `up -d`)~~ — **DONE** (2026-08-26): rebuilt, both servers restarted, cascade verified live on both ports.
 - The code-bug list above is **fully closed** as of the final verification pass; **nothing is open going into Day 5.**
 - **Docker Compose for the app** is Day 5 — DB already has one (ADR-006). The live DB now genuinely cascades, so what we box is what we tested.
-- `uvicorn --reload` watching `src` can crash on the mid-edit save of a big rewrite; use restarts for big changes. (The TS `tsx` track has *no* reload — after any `ts/src/*` edit, Ctrl-C + re-run `pnpm dev` or the running process is stale; the final matrix run caught a stale TS process once, which is exactly what 500-vs-404 drift looks like.)
+- `uvicorn --reload` watching `src` can crash on the mid-edit save of a big rewrite; use restarts for big changes. (The TS `tsx` track has *no* reload — after any `ts/src/*` edit, Ctrl-C + re-run `pnpm dev` or the running process is stale; the final verification pass caught a stale TS process once, which is exactly what 500-vs-404 drift looks like.)
 
 ## Commands Run
 
@@ -102,9 +103,9 @@ curl -s localhost:8000/projects/00000000-0000-0000-0000-000000000000            
 
 ### Session operations record (08-21 → 08-24 terminal history)
 
-Pre-smoke-test sessions, reconstructed to keep the lessons out of scrollback:
+Pre-verification sessions, reconstructed to keep the lessons out of scrollback:
 
-- **Manual error probing (08-21, pre-fix)**: bad payloads hand-run before the contract existed — issue POST with `name` instead of `title` (the real create-issue bug), an unquoted `"status: "open"` (malformed-JSON typo), nonexistent + empty `workspace_id`, trailing-slash `GET /workspaces/`. These are exactly the cases checks 02–05 of the smoke test formalize; the 500s seen then are the pre-fix baseline the closeout proved gone.
+- **Manual error probing (08-21, pre-fix)**: bad payloads hand-run before the contract existed — issue POST with `name` instead of `title` (the real create-issue bug), an unquoted `"status: "open"` (malformed-JSON typo), nonexistent + empty `workspace_id`, trailing-slash `GET /workspaces/`. These are exactly the cases the 4-step verification below formalizes.
 - **Boot order** (repeated across 08-21/22/24): `docker compose up` → `pnpm db:push` → `pnpm dev` / `uv run python -m src.main` → verify GET. Mystery 500s after schema edits traced to a stale *DB* (push never ran) or a stale *process* (TS has no hot reload) — both look identical from the client. Rule: after any schema edit, `db:push` before starting the app.
 - **TS reset saga (08-24)**: `npm drizzle-kit drop` → no such command; `pnpm db:drop` → no such script. Working reset: temp drizzle config w/ empty table list + `push --force` → `rm -rf drizzle/` → `pnpm db:push`. Recipe recorded in ADR-005 Field Notes.
 - **`drizzle/` journal gitignored** today — push snapshots regenerate from `src/db.ts`.
