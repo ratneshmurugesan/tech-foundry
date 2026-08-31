@@ -23,6 +23,26 @@ day-XX-[topic]-[yyyy-mm-dd-hhmm].md
 
 ---
 
+## Writing Standard
+
+Note prose reads **story first, terms in place** — a non-technical reader gets the *idea* from the picture, then the technical terms confirm it. Applies to Built, Learned, Broke & Fixed, and Notes prose:
+
+- **Open with the picture** — one sentence an outsider can visualize (a house being built, a plumber swapping a pipe, a courier sorting mail).
+- **Then the terms, verbatim** — the exact technical terms (names, versions, commands) immediately after, unchanged. The picture hangs the idea; the terms are the receipt.
+- **One idea per bullet** — max ~2 sentences per bullet. If a bullet carries two ideas, split it.
+- **Analogies from everyday life, never from other tech** — no "it's like X library".
+
+**Don't story-ify the receipts**: Commands Run, file paths, version pins, dates, error messages (quoted verbatim in Broke & Fixed), table rows — those stay exact. The picture goes *around* them, never inside them.
+
+**Worked example** (from Day 4, Taskflow — `create_all` vs `db:push`):
+
+> **Before:** `PY Base.metadata.create_all() creates tables but does not ALTER existing FK constraints — FK/cascade changes require docker compose down -v && up -d + db:push.`
+> **After:** `Python's startup is a first-time house builder: it happily builds the house in year one, but refuses to renovate — so the moment we changed the walls (the cascade FKs), the only way in was to raze the block (down -v) and build again. (Drizzle, the TS side, does renovate — db:push was all it needed.)`
+
+Same facts, same commands, same terms — but now there's a picture to hang the idea on.
+
+---
+
 ## Template
 
 Copy the block below as `day-XX-[topic].md`:
@@ -32,18 +52,18 @@ Copy the block below as `day-XX-[topic].md`:
 
 ## Built
 
-What was actually built today? List each file or component with checkboxes.
+What was actually built today? List each file or component with checkboxes. For each item: the everyday picture, then the technical terms in place (see Writing Standard above).
 
 ## Learned
 
-What concepts, patterns, or OSS references did you encounter?
+What concepts, patterns, or OSS references did you encounter? Write these story-first (see Writing Standard above) — picture first, exact terms right after.
 
 ## Broke & Fixed
 
 What went wrong and how was it resolved?
-- Error encountered (include the error message if helpful)
-- Root cause analysis
-- Fix applied
+- Error encountered (include the error message verbatim if helpful)
+- Root cause analysis (story-first: what broke, *as a picture*, then the exact mechanism)
+- Fix applied (the exact commands — kept verbatim)
 - Lesson learned (so it doesn't happen again)
 
 If nothing broke, write "No issues encountered."
@@ -75,7 +95,7 @@ Key commands executed today, with outcomes. Include for reproducibility.
 
 ## Preview of Next day
 
-Brief overview of what tomorrow covers so you can prepare mentally:
+Story-first overview of what tomorrow covers — the everyday picture of the day, then the technical topics in place (see Writing Standard above):
 - **What's being built**: Name the day's topic and the main deliverable
 - **Concepts**: New patterns, frameworks, or DDD concepts you'll encounter
 - **Files**: New files you'll create or existing files you'll modify
@@ -91,7 +111,7 @@ List any ADRs created or updated today.
 
 ## Notes
 
-Free-form notes, observations, or anything that doesn't fit above.
+Free-form notes, observations, or anything that doesn't fit above (story-first prose, see Writing Standard above).
 - Prompt file used: `tech-foundry/docs/prompts/2026-08-12-1750.md`
 - Roadmap reference: `tech-foundry/docs/roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`
 - Any deviations from the planned day

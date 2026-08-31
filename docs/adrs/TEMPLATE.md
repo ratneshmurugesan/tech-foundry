@@ -33,6 +33,26 @@ Proposed → Active → Superseded → Deprecated
 
 ---
 
+## Writing Standard
+
+ADR prose reads **story first, terms in place** — a non-technical reader should get the *idea* from the picture, then the technical terms confirm it. Applies to Context, Decision, and Consequences prose:
+
+- **Open with the picture** — one sentence an outsider can visualize (a house being built, a courier sorting mail, a landlord changing locks).
+- **Then the terms, verbatim** — the exact technical terms (names, versions, commands) immediately after, unchanged. The picture hangs the idea; the terms are the receipt.
+- **One idea per bullet** — max ~2 sentences per bullet. If a bullet carries two ideas, split it.
+- **Analogies from everyday life, never from other tech** — no "it's like X library".
+
+**Don't story-ify the receipts**: command blocks, version pins, dates, file paths, the Status line, table rows, References lists — those stay exact. The picture goes *around* them, never inside them.
+
+**Worked example** (from Day 4, Taskflow — `create_all` vs `db:push`):
+
+> **Before:** `PY Base.metadata.create_all() creates tables but does not ALTER existing FK constraints — FK/cascade changes require docker compose down -v && up -d + db:push.`
+> **After:** `Python's startup is a first-time house builder: it happily builds the house in year one, but refuses to renovate — so the moment we changed the walls (the cascade FKs), the only way in was to raze the block (down -v) and build again. (Drizzle, the TS side, does renovate — db:push was all it needed.)`
+
+Same facts, same commands, same terms — but now there's a picture to hang the idea on.
+
+---
+
 ## Template
 
 Copy the block below as `adr-NNN-short-title.md`:
@@ -47,7 +67,8 @@ Copy the block below as `adr-NNN-short-title.md`:
 
 ## Context
 
-What is the situation requiring evaluation?
+Write this section story-first (see Writing Standard above) — the picture of *why this moment hurt*, then the exact terms.
+
 - What problem are we solving?
 - What constraints exist (budget, timeline, solo dev, OSS references)?
 - What alternatives were considered?
@@ -61,6 +82,8 @@ What is the change we're proposing or have agreed to?
 - If temporary (Day 1 shortcut), state the upgrade path.
 
 ## Consequences
+Story-first bullets (see Writing Standard above) — each trade-off gets a picture first, the terms right after.
+
 
 **Positive**:
 - What gains do we get?
