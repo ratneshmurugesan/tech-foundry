@@ -4,6 +4,8 @@
 
 ## Built
 
+The counter window grows a second pair of hands: every station can now take, change, and cancel orders — and when something blows up in the kitchen, the front door tells you so politely. Both tracks ship the same ticket shape: 12 routes each, one shared error contract.
+
 **TypeScript track** (Fastify 5 + Drizzle)
 
 - [x] `ts/src/types.ts` — Added `Create*`/`Update*` interfaces per entity (12 total)
@@ -19,14 +21,14 @@
 
 ## Learned
 
-- **Fastify 5 + Zod v4 need a version lockstep**: `@fastify/schema@v3` works with Fastify 5. `zod@^4.4.3` is the pairing.
-- **The "one error contract" is worth more than it costs.** Identical 400/404/409/500 JSON on both ports means the same `curl` sequence and any client script can hit `:8000` or `:8001` unchanged. The dual-language track just earned a real parity win.
-- **`PATCH` is a semantics bug magnet.** The TS `patch_project` route validated a *workspace* (not the project) before a workspace change — a copy-paste of the workspace route, force-unwrapping an optional field. Partial update on an entity with an FK is the day's core DDD-adjacent trap: "which field am I moving, and does that *destination* exist?" The answer both trackers settled on: validate the *destination*, but only when that field is actually in the payload.
-- **Cascade = one line in the schema, zero lines in the service.** `{ onDelete: 'cascade' }` / `ondelete='cascade'` replaces an entire multi-statement transaction. Roadmap said "no transactions" — the database gave us the safe behavior anyway. That's the point of pushing invariants down.
-- **Global exception handlers double-edged**: they make 500s safe, but they also make *your own* Python bugs (NameError, NoneType) look like "something unexpected". The server log is the only truth.
-- **Shell verification hygiene**: in ad-hoc validation scripts, never truncate the *same* variable that a later `jq` extraction reads — truncation once clobbered the `.id` extraction, making a cascade check "pass" vacuously (the witness row never existed). Keep the full body (for `jq`) and the display copy as separate variables.
-- **`ON DELETE CASCADE` requires the constraint to exist in the live DB.** PY's `Base.metadata.create_all()` *creates* tables but does not *alter* existing `FOREIGN KEY` constraints — Day 3's tables keep the old non-cascade FK until the DB is rebuilt. Drizzle's `db:push` does reconcile DDL. This is a concrete ADR-005 negative, now with real teeth.
-- **`z.infer` vs interface duplication**: TS now keeps Zod schemas (`server.ts`) *and* TS interfaces (`types.ts`) for every Create/Update/Read type. Two sources of truth. Phase 2: `export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>`.
+- **Fastify 5 + Zod v4 need a version lockstep**: two dancers who only turn together — pair the wrong partner and the whole figure falls apart mid-routine. `@fastify/schema@v3` works with Fastify 5. `zod@^4.4.3` is the pairing.
+- **The "one error contract" is worth more than it costs.** One chain, two branches: the ticket counter speaks one language at both locations, so a customer — `curl` in this case — never has to learn twice. Identical 400/404/409/500 JSON on both ports means the same `curl` sequence and any client script can hit `:8000` or `:8001` unchanged. The dual-language track just earned a real parity win.
+- **`PATCH` is a semantics bug magnet.** Reassigning a tenant to a new unit without checking the unit exists first — the route did exactly that in spirit: the TS `patch_project` route validated a *workspace* (not the project) before a workspace change, a copy-paste of the workspace route, force-unwrapping an optional field. Partial update on an entity with an FK is the day's core DDD-adjacent trap: "which field am I moving, and does that *destination* exist?" The answer both trackers settled on: validate the *destination*, but only when that field is actually in the payload.
+- **Cascade = one line in the schema, zero lines in the service.** A house rule carved into the foundation: demolish the house, and the rule takes the whole lot with it — no plumber has to remember or enforce anything. `{ onDelete: 'cascade' }` / `ondelete='cascade'` replaces an entire multi-statement transaction. Roadmap said "no transactions" — the database gave us the safe behavior anyway. That's the point of pushing invariants down.
+- **Global exception handlers double-edged**: a polite receptionist who shrugs the same way whether a guest tripped over the mat or the roof came off — safe for the visitor, useless for diagnosis. They make 500s safe, but they also make *your own* Python bugs (NameError, NoneType) look like "something unexpected". The server log is the only truth.
+- **Shell verification hygiene**: a witness who leaves the scene can't testify later. In ad-hoc validation scripts, never truncate the *same* variable that a later `jq` extraction reads — truncation once clobbered the `.id` extraction, making a cascade check "pass" vacuously (the witness row never existed). Keep the full body (for `jq`) and the display copy as separate variables.
+- **`ON DELETE CASCADE` requires the constraint to exist in the live DB.** Python's startup is a first-time house builder: it happily builds the house in year one, but refuses to renovate — so the moment we changed the walls (the cascade FKs), the only way in was to raze the block (`down -v`) and build again. (Drizzle, the TS side, does renovate — `db:push` was all it needed.) PY's `Base.metadata.create_all()` *creates* tables but does not *alter* existing `FOREIGN KEY` constraints — Day 3's tables keep the old non-cascade FK until the DB is rebuilt. This is a concrete ADR-005 negative, now with real teeth.
+- **`z.infer` vs interface duplication**: the same recipe hand-written on two whiteboards — every change must be copied over by hand, and eventually the two boards drift. TS now keeps Zod schemas (`server.ts`) *and* TS interfaces (`types.ts`) for every Create/Update/Read type. Two sources of truth. Phase 2: `export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>`.
 
 ## Broke & Fixed
 
@@ -44,7 +46,7 @@
 | `@app.on_event` deprecation | `py/src/server.py` | — | ⚪ Deferred (lifespan, Phase 2) |
 | TS `create_project` had no workspace parent check — a bad `workspace_id` hit the FK, got sanitized to a bare 500 (PY already 404s); TS `create_issue` had the same gap for `project_id` | `ts/src/server.ts` | me, final cross-track verification pass vs the now-correct PY | ✅ Fixed — parent lookup → 404, `404` added to response schemas. Both trackers now fully symmetric |
 
-Net of the test suite pass: **five real code bugs were fixed** (three I missed the first time — the `Exception` raise, the missing `create_projects` parent check, the missing `patch_projects` destination check — plus two retracted false positives). The global 500 handler did its job by staying silent and safe, which is exactly why these were the hard ones to surface. The final verification pass then surfaced **one more real gap on the *other* track** — the asymmetry audit was exactly worth it — and the only open item left, the **DB rebuild**, is now closed and verified (below).
+Net of the test suite pass: **five real code bugs were fixed** (three I missed the first time — the `Exception` raise, the missing `create_projects` parent check, the missing `patch_projects` destination check — plus two retracted false positives). The global 500 handler did its job by staying silent and safe — the airbag took the hit, which is exactly why the dents behind it were the hard ones to see. The final verification pass then surfaced **one more real gap on the *other* track** — the asymmetry audit was exactly worth it — and the only open item left, the **DB rebuild**, is now closed and verified (below).
 
 ## Blocked / Deferred
 
@@ -105,17 +107,19 @@ curl -s localhost:8000/projects/00000000-0000-0000-0000-000000000000            
 
 Pre-verification sessions, reconstructed to keep the lessons out of scrollback:
 
-- **Manual error probing (08-21, pre-fix)**: bad payloads hand-run before the contract existed — issue POST with `name` instead of `title` (the real create-issue bug), an unquoted `"status: "open"` (malformed-JSON typo), nonexistent + empty `workspace_id`, trailing-slash `GET /workspaces/`. These are exactly the cases the 4-step verification below formalizes.
-- **Boot order** (repeated across 08-21/22/24): `docker compose up` → `pnpm db:push` → `pnpm dev` / `uv run python -m src.main` → verify GET. Mystery 500s after schema edits traced to a stale *DB* (push never ran) or a stale *process* (TS has no hot reload) — both look identical from the client. Rule: after any schema edit, `db:push` before starting the app.
-- **TS reset saga (08-24)**: `npm drizzle-kit drop` → no such command; `pnpm db:drop` → no such script. Working reset: temp drizzle config w/ empty table list + `push --force` → `rm -rf drizzle/` → `pnpm db:push`. Recipe recorded in ADR-005 Field Notes.
-- **`drizzle/` journal gitignored** today — push snapshots regenerate from `src/db.ts`.
-- **Volume truth (correction in ADR-006)**: plain `docker compose down` kept data (postgres image's anonymous volume); only `down -v` wiped it. The ADR-006 "data is lost on down" line was wrong in both directions.
+- **Manual error probing (08-21, pre-fix)**: the test diner eating blind before the menu was printed — bad payloads hand-run before the contract existed: issue POST with `name` instead of `title` (the real create-issue bug), an unquoted `"status: "open"` (malformed-JSON typo), nonexistent + empty `workspace_id`, trailing-slash `GET /workspaces/`. These are exactly the cases the 4-step verification below formalizes.
+- **Boot order** (repeated across 08-21/22/24): a kitchen that opens before prep — `docker compose up` → `pnpm db:push` → `pnpm dev` / `uv run python -m src.main` → verify GET. Mystery 500s after schema edits traced to a stale *DB* (push never ran) or a stale *process* (TS has no hot reload) — both taste identical from the customer's chair. Rule: after any schema edit, `db:push` before starting the app.
+- **TS reset saga (08-24)**: a renovator who can't find the demolition switch — `npm drizzle-kit drop` → no such command; `pnpm db:drop` → no such script. Working reset: temp drizzle config w/ empty table list + `push --force` → `rm -rf drizzle/` → `pnpm db:push`. Recipe recorded in ADR-005 Field Notes.
+- **`drizzle/` journal gitignored** today — the snapshots are photocopies, not the drawing: push snapshots regenerate from `src/db.ts`.
+- **Volume truth (correction in ADR-006)**: the landlord swore the place was cleaned out, but the tenants' boxes were still in the cellar. Plain `docker compose down` kept data (postgres image's anonymous volume); only `down -v` wiped it. The ADR-006 "data is lost on down" line was wrong in both directions.
 
 ## ADRs Created
 
 - **ADR-007** — `docs/adrs/adr-007-crud-error-contract-cascade.md` (CRUD layer: semantic error contract + DB cascade + roadmap "thin" deviation)
 
 ## Preview: Day 5 — Docker Compose
+
+The restaurant moves into a shipping container: one `docker compose up`, and the whole place opens — kitchen, counter, and cellar on the same pallet.
 
 Roadmap: "Docker Compose — single service + Postgres; `docker compose up` starts everything."
 

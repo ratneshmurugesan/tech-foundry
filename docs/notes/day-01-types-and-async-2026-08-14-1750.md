@@ -2,6 +2,8 @@
 
 ## Built
 
+Two skeletons, both with a heartbeat — 12 files, one per track, side by side: entities, IDs, a heartless in-memory repository, and an entry point that already runs create → save → query. The in-memory repository stands in for a database; we'll raze it on Day 3, same beats, new home.
+
 - [x] `ts/package.json` — pnpm project config, tsx for dev, TypeScript 5.5 strict
 - [x] `ts/tsconfig.json` — ES2022 target, ESM modules, strict mode enabled
 - [x] `ts/src/types.ts` — Workspace, Project, Issue interfaces (Entities with identity)
@@ -17,20 +19,22 @@
 
 ## Learned
 
-- **Entity vs Value Object**: Entities (Workspace, Project, Issue) have identity via `id`. Value Objects (the id itself) are defined by attributes, not identity. This is the atomic DDD building block every repo starts with.
-- **Dual-language type mapping**:
+Two parallel kitchens, two sets of ingredients — the same recipe in different hands.
+
+- **Entity vs Value Object**: A person is *someone* — you tell one person from another by who she is, not what she's wearing; a size or a weight is just a measurement, interchangeable with any equal one. Entities (Workspace, Project, Issue) are the *someone* class — they carry identity via `id`. Value Objects (the id itself) are the measurements — defined by attributes, not identity. This is the atomic DDD building block every repo starts with.
+- **Dual-language type mapping** — the ingredient list in both languages, same dishes different labels:
   - TS `interface` → Python `Pydantic BaseModel` (runtime validation vs compile-time)
   - TS `Date` → Python `datetime`
   - TS `crypto.randomUUID()` → Python `uuid.uuid4()`
   - TS `async/await` → Python `async/await` (same keyword, different event loop)
   - TS `undefined` → Python `None`
-- **Repository pattern**: Abstracting persistence behind `save/find/delete` means Day 3's PostgreSQL swap only touches the repository internals, not the business logic in `main.ts/main.py`.
-- **Async from day one**: Even in-memory repos use `async`, so transitioning to real DB calls (asyncpg/Drizzle on Day 3) is a one-line change inside the method body — no signature changes needed.
+- **Repository pattern**: The mailroom — your team talks to one counter, and nobody outside cares about the filing system behind it. Abstracting persistence behind `save/find/delete` means Day 3's PostgreSQL swap only touches the repository internals, not the business logic in `main.ts/main.py`.
+- **Async from day one**: You order the pizza by phone and keep walking around the kitchen — the order still arrives, you just didn't stall the whole room. Even in-memory repos use `async`, so transitioning to real DB calls (asyncpg/Drizzle on Day 3) is a one-line change inside the method body — no signature changes needed.
 
 ## Broke & Fixed
 
 ### Python Environment Hell (09:04 – 09:32)
-Spent 28 minutes just getting a working Python venv + pydantic. The chain:
+A house delivered without plumbing, and the tools to install the plumbing weren't in the box either — 28 minutes of failed fittings. The chain:
 
 | Attempt | Command | Why it failed |
 |---|---|---|
@@ -48,6 +52,7 @@ Then **ripped it all out** (`deactivate`, `rm -rf bin include lib lib64 pyvenv.c
 **Lesson**: Ubuntu ships Python without venv or pip by default. The one-liner that works: `sudo apt install python3-venv python3-full -y`.
 
 ### Switching from pip to uv (12:26 – 13:22)
+Torn out hand-drilled plumbing and called a professional.
 
 | Struggle | What happened |
 |---|---|
@@ -75,23 +80,23 @@ Then **ripped it all out** (`deactivate`, `rm -rf bin include lib lib64 pyvenv.c
 **Lesson**: pnpm's `approve-builds` for native dependencies is a gotcha. The `pnpm store prune` command cleans up orphaned packages from the global store. Generic repo type constraint was the main code bug.
 
 ### TypeScript Generic Type Error
-`Property 'id' does not exist on type 'T'` in `InMemoryRepository<T>`.
+The key doesn't match the lock. `Property 'id' does not exist on type 'T'` in `InMemoryRepository<T>`.
 **Fix**: Added type constraint `T extends { id: string }` so `findById` can safely access `.id` on generic type parameter.
 
 ### Python Type Mismatch
-`id: UUID = str(uuid4())` — the type annotation said `UUID` but the default was a `string`. Pydantic silently coerced it, but it was misleading and would break if strict validation was enabled.
+An envelope labeled "photo" containing a coupon — technically delivered, but nobody trusts it. `id: UUID = str(uuid4())` — the type annotation said `UUID` but the default was a `string`. Pydantic silently coerced it, but it was misleading and would break if strict validation was enabled.
 **Fix**: Changed to `id: str = Field(default_factory=lambda: str(uuid4()))` — type and value now match. Also fixed `created_at: datetime = datetime.now` → `Field(default_factory=datetime.now)` (calling the function vs referencing it).
 
 ### Repository API Drift
-Python `delete(entity: T)` took a full entity object, while TypeScript `delete(id: string)` took just an ID string. The tracks were supposed to mirror each other.
+Two shops agreed to mirror each other, then one invented its own return policy. Python `delete(entity: T)` took a full entity object, while TypeScript `delete(id: string)` took just an ID string. The tracks were supposed to mirror each other.
 **Fix**: Aligned Python to `delete(id: str)` — both tracks now have identical signatures.
 
 ### TypeScript Fire-and-Forget
-`main()` at the bottom of `main.ts` was called without `await`, meaning unhandled promise rejections would be silently swallowed.
+Ordered by phone and never picked it up — the caller hung up, and nobody heard the kitchen. `main()` at the bottom of `main.ts` was called without `await`, meaning unhandled promise rejections would be silently swallowed.
 **Fix**: Changed to `await main()` at top level.
 
 ### SSH Key / Git Push Failure
-`git push origin dev` failed with SSH permission denied — the SSH config had the wrong host alias.
+Knocking at a door that doesn't exist at the addressed house — GitHub's side was fine, the alias in the doorbell config wasn't. `git push origin dev` failed with SSH permission denied — the SSH config had the wrong host alias.
 **Fix**: Ran `ssh -T git@github.com` to diagnose, then `nano ~/.ssh/config` to fix the config, then `git push origin dev` succeeded.
 
 ## Blocked / Deferred
@@ -165,6 +170,8 @@ Python `delete(entity: T)` took a full entity object, while TypeScript `delete(i
 Both tracks use uuid4 from the start (`crypto.randomUUID()` in TS, `uuid4()` in Python). ULID is the planned upgrade for Phase 2.
 
 ## Preview of Next day
+
+The house gets a front door: guests arrive at a counter, orders go back to the kitchen, food comes out to the table — a restaurant opening for business.
 
 **Day 2: API Skeleton** — Wrap today's in-memory repos behind HTTP endpoints.
 - **Concepts**: REST routes, request/response cycle, framework routing (FastAPI decorators, Fastify route registration)
