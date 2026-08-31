@@ -7,33 +7,33 @@
 
 ## Context
 
-Day 2 requires wrapping our in-memory repositories behind HTTP endpoints. We need an HTTP framework for each language track. The decision needs to balance: auto-generated API docs (critical for a solo dev), async-first design (we're using async from Day 1), and ecosystem maturity.
+Day 2 wraps the in-memory repositories behind HTTP endpoints so they can be `curl`ed from outside — the notebook needs a front door. One framework choice per language track, balancing three needs: auto-generated API docs (a solo dev has no one to ask, and no spare hours to hand-maintain a document that lies), async-first design (Day 1 committed to the async pattern; the HTTP layer shouldn't fight it), and ecosystem maturity (a 10+ year project needs a framework that will still be around).
 
 ## Decision
 
 - **TypeScript**: Fastify — route registration via `app.get()`, schema validation built-in, auto Swagger docs via `@fastify/swagger`
 - **Python**: FastAPI — decorator-based routes `@app.get()`, Pydantic integration native, auto OpenAPI/Swagger docs
 
-Both frameworks share architectural DNA: async-first, automatic API documentation, request validation via schemas.
+Both frameworks are the same recipe adapted to two kitchens: async-first, automatic API documentation, request validation via schemas. Both also publish a machine-readable map of every route — the API documents itself, so the door is never unlocked by guesswork.
 
 ## Consequences
 
 **Positive**:
-- Auto-generated Swagger/OpenAPI docs — critical for solo dev who can't maintain separate API docs
-- Both frameworks are async-native, matching our Day 1 async repository pattern
-- FastAPI's Pydantic integration means our existing `BaseModel` types work directly as request/response validators
+- Auto-generated Swagger/OpenAPI docs — the API documents itself every time a route changes; a solo dev with no one to ask never maintains a hand-written document that lies
+- Both frameworks are async-native — Day 1's async pattern flows straight into the HTTP layer, no rewrite to sync
+- FastAPI's Pydantic integration means our existing `BaseModel` types work directly as request/response validators — the same types, now the front desk
 - Fastify is the fastest Node.js HTTP framework (benchmarks), aligns with roadmap's "make it fast" phase
-- Both have large ecosystems and active communities
+- Both sit on large, active ecosystems — not orphan tools
 
 **Negative**:
-- Fastify's plugin system has a learning curve (need to register plugins before routes)
-- FastAPI is younger than Flask/Django — some enterprise tooling gaps
-- Both frameworks are relatively new compared to Express/Django (stability risk for a 10+ year project)
+- Fastify's plugin system has a learning curve — you must learn to register plugins before routes, like a key that has to be in the lock before the door can open (order matters)
+- FastAPI is younger than Flask/Django — a 10+ year project runs on its pace, with some enterprise tooling gaps
+- Both are newer than Express/Django — stability risk for a project meant to outlast them
 
 **Mitigation**:
-- Day 2 uses only basic GET routes — minimal surface area
-- Deepening 2 (Weeks 11-14) is reserved for infrastructure decisions — framework swap is possible then
-- The repository pattern isolates business logic from the HTTP layer — swapping frameworks only touches `server.ts/server.py`
+- Day 2 uses only basic GET routes — a small door, minimal surface area
+- Deepening 2 (Weeks 11-14) is reserved for infrastructure decisions — a framework swap is still possible then
+- The repository pattern isolates business logic from the HTTP layer — a framework swap touches only `server.ts`/`server.py`; the domain is not nailed to the door
 
 ## References
 

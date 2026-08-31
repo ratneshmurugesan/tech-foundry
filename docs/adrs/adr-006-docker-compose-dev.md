@@ -6,35 +6,36 @@
 
 ## Context
 
-PostgreSQL needs to run somewhere for local development. Options: install PostgreSQL natively, use a managed cloud DB, or containerize it. Each has tradeoffs for a solo dev working on a 10+ year project.
+The database is a tenant that needs housing — PostgreSQL must run *somewhere* for local development: installed natively on the host, as a managed cloud DB, or in a container the repo itself can build or throw away. Each has tradeoffs for a solo dev working on a 10+ year project.
 
 ## Decision
 
-Use **Docker Compose** to run PostgreSQL as a local container:
+Put the tenant in a self-contained room the repo can build anywhere:
+use **Docker Compose** to run PostgreSQL as a local container:
 - `postgres:15` image, mounted at `0.0.0.0:5432`
 - `postgres:postgres` credentials, database `taskflow`
 - Health check: `pg_isready -U postgres` every 10s
 - Single `docker-compose.yml` in `apps/taskflow/` shared by both TS and Python tracks
 
-Both language tracks connect to the same container — same DB, same data, different ports (TS: 8000, Python: 8001).
+Two tenants, one well — both language tracks connect to the same container: same DB, same data, different taps (TS: 8000, Python: 8001).
 
 ## Consequences
 
 **Positive**:
-- Zero native installation — no PostgreSQL packages on the host OS
-- Reproducible — any clone of the repo can `docker compose up -d` and get the same setup
-- Easy to reset — `docker compose down` tears everything down, start fresh
-- Both tracks share one DB instance — consistent data for comparison
-- Health check ensures the app doesn't start before the DB is ready
+- A tenant, not a renovation — no PostgreSQL packages ever touch the host OS
+- The room comes off a stamp — any clone of the repo can `docker compose up -d` and get the same setup
+- Tearing it down is deliberate — `docker compose down` demolishes the room; `up` rebuilds it fresh
+- Two tenants, one well — both tracks share one DB instance, so comparisons draw from the same water
+- The tenant rings before entering — the health check keeps the app from starting before the DB is ready
 
 **Negative**:
-- Docker dependency — developer must have Docker installed (acceptable for this project)
-- No *named* volume in compose yet — data lifecycle follows the **anonymous** volume Docker auto-creates from the postgres image's `VOLUME` declaration: `down` keeps it, `down -v` / `prune` wipe it (see Field Notes for the correction)
-- Slightly slower than native PostgreSQL — negligible for dev, not a concern yet
+- The prerequisite moves up a floor — instead of installing PostgreSQL natively, every developer must install Docker (acceptable for this project)
+- The well has an unmarked cellar — no *named* volume in compose yet; data lifecycle follows the **anonymous** volume Docker auto-creates from the postgres image's `VOLUME` declaration: `down` keeps it, `down -v` / `prune` wipe it (see Field Notes for the correction)
+- Containers add a whisper of latency — slightly slower than native PostgreSQL; negligible for dev, not a concern yet
 
 **Mitigation**:
-- Roadmap Sprint 1 Day 5: "Docker Compose (Postgres + app)" — full Dockerization of app containers too
-- Deepening Pass 1 (Weeks 7-10): proper Docker images, volume mounts, production-ready compose
+- The shed gets a neighbor — Roadmap Sprint 1 Day 5 ("Docker Compose (Postgres + app)") dockerizes the app containers too
+- The shed becomes a proper building — Deepening Pass 1 (Weeks 7-10): proper Docker images, volume mounts, production-ready compose
 
 ## Field Notes (Day 3 → 4)
 

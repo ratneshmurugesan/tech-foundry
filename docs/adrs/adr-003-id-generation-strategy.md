@@ -6,11 +6,12 @@
 
 ## Context
 
-Every entity needs a unique identifier. The choice of ID strategy affects:
-- Uniqueness guarantees (collision risk)
-- Sortability (can you order by creation time?)
-- Index performance (monotonic vs random)
-- Database storage size
+Every entity needs a door number, and how you number the doors changes three things:
+
+- Uniqueness guarantees (collision risk) — can two buildings ever get the same number?
+- Sortability (can you order by creation time?) — do higher numbers mean newer buildings?
+- Index performance (monotonic vs random) — does the mail carrier walk the street in order, or knock at random numbers?
+- Database storage size — how wide is the number plate?
 
 ## Decision
 
@@ -18,10 +19,10 @@ Every entity needs a unique identifier. The choice of ID strategy affects:
 - **TypeScript**: `crypto.randomUUID()` — native Node.js API, collision-resistant, no extra deps
 - **Python**: `str(uuid4())` — standard library, collision-resistant, no extra deps
 
-Both tracks converged on the same strategy. The original plan for a timestamp-based TS ID was abandoned in favor of consistency.
+A UUID is like a lottery ticket: guaranteed unique, but the numbers are scrambled — tickets sell in no particular order, so you can't tell from the number which was sold first. Both tracks converged on the same strategy; the original plan for a timestamp-based TS ID was abandoned in favor of consistency.
 
 **Phase 2 (make it right, Deepening 1)**:
-- **Both tracks**: ULID (Universally Unique Lexicographically Sortable Identifier)
+- **Both tracks**: ULID (Universally Unique Lexicographically Sortable Identifier) — the same guarantee, but a serial number stamped with its date of birth: still unforgeable, *and* newer numbers always sort after older ones
 - ULIDs are: 128-bit, sorted by time, URL-safe, language-agnostic
 - TypeScript: `ulid` package on npm
 - Python: `ulid` package on PyPI
@@ -29,15 +30,15 @@ Both tracks converged on the same strategy. The original plan for a timestamp-ba
 ## Consequences
 
 **Day 1 trade-offs**:
-- Both tracks use uuid4 — collision-resistant but NOT sortable
-- Consistency between tracks is achieved from day one
-- The ULID upgrade path remains the same for Phase 2
+- Both tracks use uuid4 — collision-resistant but *not* sortable: safe lottery tickets, with no built-in sense of order
+- Both tracks mint the same ticket from day one — consistency for free
+- The switch to the ULID "stamp" stays the same plan for Phase 2
 
 **ULID upgrade benefits**:
-- Single ID format across both languages
-- Time-sorted — new entities have higher IDs (better for DB indexes)
-- 1.2 million ULIDs per millisecond without collision
-- 26-character string, same size as UUID (36 char) but shorter
+- One number format runs the whole shop in both languages
+- Time-sorted — like a building stamped with its build date, new entities get higher IDs (kinder to DB indexes: the mail carrier can walk the street in order)
+- 1.2 million ULIDs per millisecond and still no collision — the stamp counter never overflows in practice
+- 26 characters versus the UUID's 36 — a shorter number plate, same uniqueness guarantee
 
 ## References
 

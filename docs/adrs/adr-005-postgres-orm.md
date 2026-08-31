@@ -7,46 +7,46 @@
 
 ## Context
 
-Day 3 of Sprint 1 calls for replacing in-memory storage with a real database. The roadmap specifies PostgreSQL. The dual-language track means we need one ORM per language — each with different ecosystems, async models, and community conventions.
+Day 3 of Sprint 1 burns the in-memory notebook and moves the data into a building with proper shelves — PostgreSQL, per the roadmap. The dual-language track means two foremen for the same building: one ORM per language, each with its own ecosystem, async model, and community conventions.
 
 The decision has two axes: which database, and which ORM/driver per track.
 
 ## Decision
 
-- **Database**: PostgreSQL 15 — single shared instance via Docker Compose, `postgres:postgres` credentials, port 5432
-- **TypeScript ORM**: Drizzle ORM with `postgres.js` driver — schema-first, type-safe SQL-like queries, zero runtime overhead
+- **Database**: PostgreSQL 15 — one building, shared by both tracks, run via Docker Compose with `postgres:postgres` credentials on port 5432
+- **TypeScript ORM**: Drizzle ORM with `postgres.js` driver — schema-first, type-safe SQL-like queries, zero runtime overhead: the foreman writes plain SQL and TypeScript keeps the ledger of what's allowed
 - **Python ORM**: SQLAlchemy 2.x async with `asyncpg` — mature, `async_sessionmaker` pattern, Pydantic bridge for API responses
 
-Both tracks share the same PostgreSQL instance — same schema, same data, same connection string. The only difference is the client-side abstraction layer.
+Both tracks walk into the same building with the same key — same schema, same data, same connection string. Drizzle stays close to the concrete (SQL), SQLAlchemy brings full-architect machinery (ORM mapping, sessions). The difference is the client-side abstraction, the *client-side* only.
 
 ### Schema Strategy (temporary)
 
-- **TS**: Drizzle `db:push` — schema inferred from TypeScript definitions, pushed directly to DB
-- **Python**: SQLAlchemy `init_db()` with `Base.metadata.create_all()` — tables created at app startup
+- **TS**: Drizzle `db:push` — the TypeScript definitions *are* the blueprint, pushed straight to the building (no drawings kept on file — the code is the record)
+- **Python**: SQLAlchemy `init_db()` with `Base.metadata.create_all()` — the building is inspected at app startup and missing shelves are built, but existing shelves are never remodeled
 
 No migration tooling yet. Alembic is installed (`uv add --dev alembic`) but deferred to a later day.
 
 ## Consequences
 
 **Positive**:
-- One database to learn — PostgreSQL is the roadmap's long-term choice, no swap later
-- Drizzle generates types from schema — TypeScript gets compile-time safety for queries
-- SQLAlchemy async is production-proven — used by FastAPI ecosystem extensively
-- Shared DB means both tracks can query the same data — useful for comparison
-- `postgres.js` is a single package with native async/await — no pool config needed
-- SQLAlchemy's `async_sessionmaker` + `expire_on_commit=False` gives us clean async sessions
+- One database to learn — PostgreSQL is the roadmap's long-term choice; the foremen argue over the blueprint, but they agreed the *building* stays
+- Drizzle generates types from schema — a self-writing ledger: a typo in a query column is caught at compile time, not when the courier arrives empty-handed
+- SQLAlchemy async is production-proven — the FastAPI house style for a decade
+- Shared data — both tracks cook from the same pantry; their queries see the same rows, and the kitchen bump is a genuine cross-track integration test for free
+- `postgres.js` is one package with native async/await — no pool configuration needed on the TS side
+- SQLAlchemy's `async_sessionmaker` + `expire_on_commit=False` gives clean, explicit async sessions — the Pydantic bridge (`model_validate`) is then the waiter between kitchen and table
 
 **Negative**:
-- Drizzle `db:push` is not suitable for production — no migration history, no rollback
-- SQLAlchemy `create_all()` can't alter existing tables — schema changes require manual SQL or Alembic
-- Both tracks must stay in sync — if TS adds a column, Python needs it too
-- Connection pooling is implicit (handled by drivers) — less control over pool size
+- Drizzle `db:push` is not suitable for production — the ledger has no audit trail: no migration history, no rollback, only the current state
+- SQLAlchemy `create_all()` is a renovator who only builds what does not exist — it never remodels; a schema change needs manual SQL until Alembic arrives, and the sledgehammer (drop and rebuild) is the whole kit today
+- Two ledgers, no inspector — the same 3 tables written twice; add a column in one ledger and forget the other, and every read on that side returns `None` (a shelf that exists in only one ledger)
+- Connection pooling is implicit (the drivers run their own pool) — less control over pool size today; headroom while one laptop uses the building, a moving target once it is shared
 
 **Mitigation**:
-- Sprint 1 is "make it work" — auto-create is fine for a solo dev with 3 tables
-- Alembic is already installed for the Python track — migration tooling will be added when needed
-- The repository pattern isolates ORM queries from the service layer — swapping ORMs is possible
-- Deepening Pass 1 (Weeks 7-10) is reserved for infrastructure hardening
+- Three tables is disposable — while the building holds only 3 shelves, the sledgehammer (drop + rebuild) is acceptable; the rule until Alembic lands: change a track, rebuild the database
+- Two ledgers need one inspector — Deepening 1 (Weeks 7-10): Alembic for the Python ledger, Drizzle migrations for the TS ledger, and a schema-diff check in CI reconciles the two
+- The repository pattern keeps the domain out of the building — a foreman swap touches `repository.ts`/`repository.py` only
+- The database stays local-only (`127.0.0.1:5432`) — Deepening 4 (Weeks 15-18) is where the building moves onto the network; then only the doorknob (the connection string, already an environment variable on both tracks) changes
 
 ## Key Patterns Learned
 

@@ -8,7 +8,7 @@
 
 The Foundry roadmap defines a solo developer building production-grade software with a 10+ year lifespan. Two languages dominate the modern web stack: TypeScript (frontend + full-stack) and Python (backend + AI/ML).
 
-Rather than picking one and missing the other, the roadmap proposes a **dual-language track** — every concept taught twice, in both type systems.
+Choosing one is like cooking every meal in a single kitchen for a decade — you master that kitchen completely, but you never learn the second. The roadmap's answer is a **dual-language track**: learn every concept twice — once in each type system, back to back.
 
 ## Decision
 
@@ -20,19 +20,19 @@ Rather than picking one and missing the other, the roadmap proposes a **dual-lan
 ## Consequences
 
 **Positive**:
-- Deeper understanding through comparison (e.g., `interface` ↔ `BaseModel`, `Map` ↔ `dict`)
-- Can choose the right tool per layer (TS for UI, Python for AI integration)
-- Two mental models for the same DDD concept reinforces learning
+- Learning a concept in both systems is like translating the same story between two languages — the idea lands twice, and each version illuminates a different side (e.g., `interface` ↔ `BaseModel`, `Map` ↔ `dict`)
+- Each layer keeps its natural home: the UI and full-stack layers run in TS, the backend and AI/ML layers run in Python
+- Seeing one DDD concept through two mental models makes the model stick
 
 **Negative**:
-- 2x the initial scaffolding overhead
-- Risk of drift between tracks if not maintained in lockstep
-- Slower Day 1 velocity (two runtimes to configure)
+- Day 1 builds two runtimes instead of one — double the scaffolding before any domain code
+- Two copies of the same recipe start to drift — a track drifts the moment it's updated alone, so both must stay in lockstep
+- A slower start: two runtimes to configure instead of one
 
 **Mitigation**:
-- Keep a "concept parity checklist" — every file in `ts/` has a counterpart in `py/`
-- Day 1 establishes the pattern; subsequent days follow the template
-- Python track can lag by 1 day if needed, but must catch up before Phase 2
+- A "concept parity checklist" keeps the tracks honest — every file in `ts/` must have a counterpart in `py/`
+- Day 1 installs the pattern once; later days just repeat the template
+- The Python track may run a day behind when a topic is heavier there, but it must catch up before Phase 2
 
 ## References
 
