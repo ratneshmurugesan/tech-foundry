@@ -34,8 +34,8 @@ Two tenants, one well — both language tracks connect to the same container: sa
 - Containers add a whisper of latency — slightly slower than native PostgreSQL; negligible for dev, not a concern yet
 
 **Mitigation**:
-- The shed gets a neighbor — Roadmap Sprint 1 Day 5 ("Docker Compose (Postgres + app)") dockerizes the app containers too
-- The shed becomes a proper building — Deepening Pass 1 (Weeks 7-10): proper Docker images, volume mounts, production-ready compose
+- The cellar's room gets a neighbor — Roadmap Sprint 1 Day 5 ("Docker Compose (Postgres + app)") dockerizes the app containers too
+- The room becomes the restaurant — Deepening Pass 1 (Weeks 7-10): proper Docker images, a named cellar volume, production-ready compose
 
 ## Field Notes (Day 3 → 4)
 

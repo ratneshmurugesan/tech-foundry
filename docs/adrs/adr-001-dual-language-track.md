@@ -8,7 +8,7 @@
 
 The Foundry roadmap defines a solo developer building production-grade software with a 10+ year lifespan. Two languages dominate the modern web stack: TypeScript (frontend + full-stack) and Python (backend + AI/ML).
 
-Choosing one is like cooking every meal in a single kitchen for a decade — you master that kitchen completely, but you never learn the second. The roadmap's answer is a **dual-language track**: learn every concept twice — once in each type system, back to back.
+Choosing one is like running the restaurant every day for a decade with a single kitchen — you master that kitchen completely, but you never learn the second. The roadmap's answer is a **dual-language track**: learn every concept twice — once in each type system, back to back.
 
 ## Decision
 

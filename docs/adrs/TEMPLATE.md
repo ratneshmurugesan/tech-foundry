@@ -37,17 +37,39 @@ Proposed → Active → Superseded → Deprecated
 
 ADR prose reads **story first, terms in place** — a non-technical reader should get the *idea* from the picture, then the technical terms confirm it. Applies to Context, Decision, and Consequences prose:
 
-- **Open with the picture** — one sentence an outsider can visualize (a house being built, a courier sorting mail, a landlord changing locks).
+- **Open with the picture** — one sentence an outsider can visualize.
 - **Then the terms, verbatim** — the exact technical terms (names, versions, commands) immediately after, unchanged. The picture hangs the idea; the terms are the receipt.
 - **One idea per bullet** — max ~2 sentences per bullet. If a bullet carries two ideas, split it.
 - **Analogies from everyday life, never from other tech** — no "it's like X library".
+
+**Metaphor discipline** — the Foundry story is a *serialized* one: same restaurant, same cast, a new event each ADR and day.
+
+1. **The spine is the restaurant**: pictures of a *project state* (Context, Decision, Consequences) are told through that same restaurant — never through a house, a building, a parcel, or any other new venue.
+2. **Fixed cast — same words, always, so ADR 005 and a Day 12 note read as one story**:
+
+   | Foundry concept | Restaurant role |
+   |---|---|
+   | two language tracks | the two kitchens |
+   | API layer | the counter |
+   | routes / schemas | the menu |
+   | repository | the kitchen (front of house never looks inside) |
+   | Postgres DB | the cellar — dry storage below the kitchen |
+   | ORM | the translator (reads every menu, writes one order) |
+   | IDs | the ticket number |
+   | tests / e2e | the test diner |
+   | error contract | the receptionist |
+   | migrations / DDL | the renovator |
+   | Docker / deploy | the restaurant on a pallet (ships as a unit; the block around it changes) |
+   | auth | the back-of-house door |
+
+3. **Parts are possessive; pictures are local.** Structural words — *foundation, cellar, walls, shelving* — are *parts of the restaurant* ("the restaurant pours its own foundation"), never a rival protagonist. Bug- and mechanism-level pictures (a witness, a lock, a stamp) are *one-off garnish*: they may vary per incident, because the reader already knows the spine is the restaurant.
 
 **Don't story-ify the receipts**: command blocks, version pins, dates, file paths, the Status line, table rows, References lists — those stay exact. The picture goes *around* them, never inside them.
 
 **Worked example** (from Day 4, Taskflow — `create_all` vs `db:push`):
 
 > **Before:** `PY Base.metadata.create_all() creates tables but does not ALTER existing FK constraints — FK/cascade changes require docker compose down -v && up -d + db:push.`
-> **After:** `Python's startup is a first-time house builder: it happily builds the house in year one, but refuses to renovate — so the moment we changed the walls (the cascade FKs), the only way in was to raze the block (down -v) and build again. (Drizzle, the TS side, does renovate — db:push was all it needed.)`
+> **After:** `Python's startup is a first-time renovator: in year one it built the restaurant happily, but it will not remodel — so the moment we changed the walls (the cascade FKs), the only way in was to raze the place (down -v) and open a new one. (Drizzle, the TS side, does remodel — db:push was all it needed.)`
 
 Same facts, same commands, same terms — but now there's a picture to hang the idea on.
 

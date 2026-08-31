@@ -34,7 +34,7 @@ Two parallel kitchens, two sets of ingredients — the same recipe in different 
 ## Broke & Fixed
 
 ### Python Environment Hell (09:04 – 09:32)
-A house delivered without plumbing, and the tools to install the plumbing weren't in the box either — 28 minutes of failed fittings. The chain:
+A restaurant delivered without plumbing, and the tools to install the plumbing weren't in the box either — 28 minutes of failed fittings. The chain:
 
 | Attempt | Command | Why it failed |
 |---|---|---|
@@ -96,7 +96,7 @@ Ordered by phone and never picked it up — the caller hung up, and nobody heard
 **Fix**: Changed to `await main()` at top level.
 
 ### SSH Key / Git Push Failure
-Knocking at a door that doesn't exist at the addressed house — GitHub's side was fine, the alias in the doorbell config wasn't. `git push origin dev` failed with SSH permission denied — the SSH config had the wrong host alias.
+Knocking at a door that doesn't exist — GitHub's side was fine, the alias in the doorbell config wasn't. `git push origin dev` failed with SSH permission denied — the SSH config had the wrong host alias.
 **Fix**: Ran `ssh -T git@github.com` to diagnose, then `nano ~/.ssh/config` to fix the config, then `git push origin dev` succeeded.
 
 ## Blocked / Deferred
@@ -171,7 +171,7 @@ Both tracks use uuid4 from the start (`crypto.randomUUID()` in TS, `uuid4()` in 
 
 ## Preview of Next day
 
-The house gets a front door: guests arrive at a counter, orders go back to the kitchen, food comes out to the table — a restaurant opening for business.
+The restaurant gets its counter: guests arrive at the front of house, orders go back to the two kitchens, food comes out to the table — opening for business.
 
 **Day 2: API Skeleton** — Wrap today's in-memory repos behind HTTP endpoints.
 - **Concepts**: REST routes, request/response cycle, framework routing (FastAPI decorators, Fastify route registration)

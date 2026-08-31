@@ -7,9 +7,9 @@
 
 ## Context
 
-Day 3 left the Taskflow building with windows but no doors — the routes could read, but visitors could not create, change, or delete anything. Day 4 installs the remaining 3 letters of CRUD: POST, PATCH (partial update), DELETE — for all 3 entities, on both tracks (12 new routes per track, 24 total). With visitors able to come and go, three cross-cutting questions had answers:
+Day 3 left the restaurant with windows but no counter — the routes could read, but guests could not create, change, or delete anything. Day 4 installs the remaining 3 letters of CRUD: POST, PATCH (partial update), DELETE — for all 3 entities, on both tracks (12 new routes per track, 24 total). With guests able to come and go, three cross-cutting questions had answers:
 
-1. **How do errors reach the client?** Day 3 routes returned raw data or nothing — a building with no one at the door. Mutations need a front desk: status codes (201, 204, 400, 404, 500) and a *consistent* JSON shape, so a single client could talk to both servers.
+1. **How do errors reach the client?** Day 3 routes returned raw data or nothing — a restaurant with no one at the counter. Mutations need a receptionist: status codes (201, 204, 400, 404, 500) and a *consistent* JSON shape, so a single client could talk to both servers.
 2. **What about the day-3 preview's watch-outs?** It explicitly flagged cascade deletes, parent validation ("can't create issue without a project"), and partial updates. The prompt preview suggested *application-level* cascade (the worker walks the list in order and deletes the children in the service layer).
 3. **The roadmap says "how thin"** — a bare shell: no validation beyond "field exists", no error messages beyond 500. We deliberately went beyond the bare shell. This ADR records that deviation, per rule 11.
 
@@ -46,17 +46,17 @@ Day 3 left the Taskflow building with windows but no doors — the routes could 
 - **The recipe card and the menu are printed separately** (duplicated types in TS): `types.ts` interfaces exist in parallel with Zod schemas in `server.ts` — the two can drift.
 - **Some doors check the guest list, the front desk doesn't** (parent validation is inconsistent): PY `create_issues` checks the parent exists (but the bug above), while no TS route and PY `create_project` check — a bad `workspace_id` hits the FK constraint and becomes a 500, not a 404.
 - **Tape over the crack** (non-null assertions): `updatedWorkspace!` papers over `find-then-update` races that can't actually happen today (single request) but will in concurrency.
-- **A first-time housebuilder can't renovate** (PY `create_all()` cannot apply the new FK constraint to Day 3's existing tables) — cascade is silently not in effect on the Python side until the DB is rebuilt.
+- **A first-time renovator won't remodel** (PY `create_all()` cannot apply the new FK constraint to Day 3's existing tables) — cascade is silently not in effect on the Python side until the DB is rebuilt.
 
 **Mitigation**:
-- Raze the block and rebuild the house (`docker compose down -v` → `up -d`) so both tracks' cascade constraints are live; `pnpm db:push` is the TS side getting the renovation.
+- Raze the place and open a new one (`docker compose down -v` → `up -d`) so both tracks' cascade constraints are live; `pnpm db:push` is the TS side getting the remodel.
 - Teach the front desk the residents' names (Day 4.5/Deepening 1): map FK `IntegrityError` → 404 with the *parent's* name in the message; fix the `create_issues` NameError and the `"q"` typo in `delete_issues`.
 - Remove the private phones (Deepening 1): delete the now-redundant per-route try/catch — the global handler covers everything; routes only keep the 404-after-fetch.
 - Print the menu from the recipe card (Phase 2): derive TS interfaces via `z.infer` to kill the `types.ts` duplication.
 
 **Deprecation/Upgrade**:
 - The old doorman is being retired: PY `@app.on_event("startup")` → FastAPI `lifespan` context manager (deprecation warning already emitted; deferred, per rule 8)
-- The building code moves into the blueprint: schema strategy stays ADR-005 (`db:push` / `create_all`); cascade is now expressed *in the schema*, so it survives strategy swaps
+- The restaurant's bylaws move into the blueprint: schema strategy stays ADR-005 (`db:push` / `create_all`); cascade is now expressed *in the schema*, so it survives strategy swaps
 - The phone in the empty office stays unhooked until a caller appears: `ConflictError` handler stays until Phase 2 duplicate rules exist
 
 ## References

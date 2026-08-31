@@ -6,11 +6,11 @@
 
 ## Context
 
-Every entity needs a door number, and how you number the doors changes three things:
+Every entity gets a ticket number, and how you print the tickets changes three things:
 
-- Uniqueness guarantees (collision risk) — can two buildings ever get the same number?
-- Sortability (can you order by creation time?) — do higher numbers mean newer buildings?
-- Index performance (monotonic vs random) — does the mail carrier walk the street in order, or knock at random numbers?
+- Uniqueness guarantees (collision risk) — can two tickets ever carry the same number?
+- Sortability (can you order by creation time?) — do higher numbers mean newer tickets?
+- Index performance (monotonic vs random) — does the mail carrier knock in order, or at random?
 - Database storage size — how wide is the number plate?
 
 ## Decision
@@ -35,8 +35,8 @@ A UUID is like a lottery ticket: guaranteed unique, but the numbers are scramble
 - The switch to the ULID "stamp" stays the same plan for Phase 2
 
 **ULID upgrade benefits**:
-- One number format runs the whole shop in both languages
-- Time-sorted — like a building stamped with its build date, new entities get higher IDs (kinder to DB indexes: the mail carrier can walk the street in order)
+- One number format runs the whole restaurant in both languages
+- Time-sorted — like a ticket stamped with its print date, new entities get higher IDs (kinder to DB indexes: the mail carrier can knock in order)
 - 1.2 million ULIDs per millisecond and still no collision — the stamp counter never overflows in practice
 - 26 characters versus the UUID's 36 — a shorter number plate, same uniqueness guarantee
 

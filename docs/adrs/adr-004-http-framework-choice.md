@@ -14,7 +14,7 @@ Day 2 wraps the in-memory repositories behind HTTP endpoints so they can be `cur
 - **TypeScript**: Fastify — route registration via `app.get()`, schema validation built-in, auto Swagger docs via `@fastify/swagger`
 - **Python**: FastAPI — decorator-based routes `@app.get()`, Pydantic integration native, auto OpenAPI/Swagger docs
 
-Both frameworks are the same recipe adapted to two kitchens: async-first, automatic API documentation, request validation via schemas. Both also publish a machine-readable map of every route — the API documents itself, so the door is never unlocked by guesswork.
+Both frameworks are the restaurant's front of house: the same counter, opened in two different kitchens — async-first, automatic API documentation, request validation via schemas. Both also publish a machine-readable map of every route — the API documents itself, so the door is never unlocked by guesswork.
 
 ## Consequences
 
