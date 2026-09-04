@@ -4,12 +4,11 @@ Day notes capture **what happened** during each day's execution — the build lo
 
 ## When to Create
 
-After completing each day's work, create a note capturing:
 - What was built (files, components, micro-steps)
 - What was learned (concepts, patterns, OSS references)
 - What broke and how it was fixed (debugging notes)
 - What's blocked or deferred (carried to next day)
-- Commands run and their outcomes (for reproducibility)
+- Commands run by user (using usual terminal) and by me (using hidden terminal)  and their outcomes (for reproducibility)
 
 ## Naming Convention
 
@@ -146,4 +145,9 @@ Free-form notes, observations, or anything that doesn't fit above (story-first p
 
 | File | Day | Topic |
 |---|---|---|
+| `day-01-types-and-async-2026-08-14-1750.md` | 1 | Types & Async |
+| `day-02-api-skeleton-2026-08-17-1750.md` | 2 | API Skeleton |
+| `day-03-postgres-orm-2026-08-19-1750.md` | 3 | Postgres + ORM |
+| `day-04-crud-error-contract-cascade-2026-08-26-1800.md` | 4 | CRUD, Error Contract, Cascade |
+| `day-05-docker-compose-2026-09-03-1300.md` | 5 | Docker Compose (Postgres + App) |
 

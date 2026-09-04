@@ -17,5 +17,5 @@ What was built (micro steps completed)
 What was learned (concepts, patterns, OSS references)
 What broke and how it was fixed (debugging notes)
 What's blocked or deferred (carried to next day)
-Commands run and their outcomes (for reproducibility)
+Commands run by user (using usual terminal) and by me (using hidden terminal)  and their outcomes (for reproducibility)
 Now give me the complete Day 1 breakdown following all rules above."
