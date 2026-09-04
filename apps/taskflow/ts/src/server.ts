@@ -457,6 +457,6 @@ app.delete("/issues/:id", {
 
 
 export async function startServer(port: number) {
-    await app.listen({ port })
+    await app.listen({ port, host: '0.0.0.0' })
     console.log("http://localhost:" + port)
 }

@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+jspm_packages/
+
+# TypeScript Build Output
+dist/
+out/
+build/
+*.tsbuildinfo
+
+# Drizzle push journal (throwaway snapshots — src/db.ts is the source of truth)
+drizzle/

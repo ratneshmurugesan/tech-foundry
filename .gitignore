@@ -64,3 +64,7 @@ coverage/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# pnpm store and virtual store directories
+.pnpm/
+.pnpm-store/

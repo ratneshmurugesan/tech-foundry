@@ -7,8 +7,76 @@ services:
       POSTGRES_DB: taskflow
     ports:
       - "5432:5432"
+    volumes:
+      # - postgres_data:/var/lib/postgresql/taskflow-app-data # did not work
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
+  taskflow-ts:
+    build: ./ts
+    ports:
+      - "8000:8000"
+    environment: 
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/taskflow
+      CI: "true" # Fix: Tells pnpm to bypass the interactive TTY confirmation prompt
+    volumes: 
+      - ./ts:/app
+      - ./ts/node_modules:/app/node_modules:cached
+    command: pnpm dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-push:
+        condition: service_completed_successfully
+    healthcheck:
+      # Uses wget (built into Alpine) to probe the endpoint
+      # test: [ "CMD-SHELL", "wget" , "--no-verbose", "--tries=1", "--timeout=5", "--spider", "http://localhost:8000/workspaces"]
+      # test: ["CMD-SHELL","wget -q --spider -T 5 http://localhost:8000/workspaces || exit 1"]
+
+      # -f forces curl to return an error code if the server responds with a 4xx or 5xx error
+      # -s silences progress meters so logs stay completely clean
+      # test: ["CMD-SHELL", "curl -f -s http://localhost:8000/workspaces || exit 1"]
+
+      test: ["CMD-SHELL","wget -q --spider -T 5 http://127.0.0.1:8000/workspaces || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # Gives the app time to boot before failing checks
+  taskflow-py:
+    build: ./py
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/taskflow
+    volumes:
+      # Mounts local Python working directory into the container
+      - ./py:/app
+      # Anonymous volume trick protects container's internal pycache from host overwrites
+      - /app/__pycache__
+    command: uv run python -m src.main
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-push: # to serialize behind the schema owner
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/workspaces', timeout=5)"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  db-push:
+    build: ./ts
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/taskflow
+    command: pnpm db:push
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data: # to hook that local x storage space inside your PostgreSQL container (/var/lib/postgresql/data)

@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock* ./
+
+# RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY . .
+
+EXPOSE 8001
+
+CMD ["uv", "run", "python", "-m", "src.main"]
