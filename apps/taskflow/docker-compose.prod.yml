@@ -17,7 +17,7 @@ services:
       # NAME over the internal net (see the :5432 endpoints in DATABASE_URL); the
       # host port exists only for manual psql from the box, bound to 127.0.0.1 so
       # the public interface never sees 5432.
-      - "127.0.0.1:5433:5432"
+      - "5434:5432"
 
   taskflow-ts:
     volumes: ~   # replace base's ./ts + :cached node_modules mounts: the image IS the tree
