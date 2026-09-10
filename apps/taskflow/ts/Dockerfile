@@ -21,6 +21,12 @@ RUN corepack enable && corepack prepare pnpm@latest --activate && pnpm install -
 
 COPY . .
 
+# 5b — Gate ② for the TS track: bake a *verified* compile into the image.
+# `pnpm build` (NOT a bare `tsc`) — the container shell's PATH has no local tsc;
+# pnpm resolves its own. The prod *run* still uses tsx (runs src), so the baked
+# dist is a build-health proof / artifact, not what the app loads at runtime.
+RUN pnpm build
+
 EXPOSE 8000
 
 CMD ["pnpm", "dev"]

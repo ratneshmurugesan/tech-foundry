@@ -9,7 +9,6 @@ async function main() {
     } catch (error) {
         console.log(error);
     }
-    console.log("Day 3 TypeScript track: COMPLETE");
 }
 
 await main();
