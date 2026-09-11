@@ -5,8 +5,23 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: taskflow
-    ports:
-      - "5432:5432"
+    ports: []  # 2026-09-11, ADR-008: the cellar's host door is OFF by default (was a
+      # hardcoded - "127.0.0.1:5432:5432" that crashed `up` if anything else on the
+      # host owned 5432 — native Postgres, another container… — and dragged the whole
+      # stack down on the 2026-09-11 box, exactly as ADR-008 predicted).
+      #
+      # CRITICAL: must be an EMPTY LIST, not `ports:` (null). A bare `ports:` key with
+      # only comments underneath is parsed as NULL, and compose validates the BASE file
+      # in isolation, rejecting it with `services.postgres.ports must be a array` —
+      # which makes EVERY `up` fail, dev AND prod, before the overlay is even applied.
+      # `ports: []` is the valid "deliberately empty" form.
+      #
+      # The app containers reach the cellar by service name (`postgres`) over the compose
+      # network, NOT a host mapping; it only ever existed for a manual `psql localhost:5432`.
+      #
+      # Devs who want the cellar's tap on the host: add  `- "127.0.0.1:5432:5432"` under
+      # `ports:` for local dev ONLY. A prod `up` uses `-f ... -f docker-compose.prod.yml`,
+      # and its `ports: !reset []` (ADR-009) keeps prod doorless no matter what you uncomment.
     volumes:
       # - postgres_data:/var/lib/postgresql/taskflow-app-data # did not work
       - postgres_data:/var/lib/postgresql/data

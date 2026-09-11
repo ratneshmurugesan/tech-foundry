@@ -12,15 +12,31 @@
 
 services:
   postgres:
-    ports:
-      # prod: the cellar's door is host-private. Containers reach it by SERVICE
-      # NAME over the internal net (see the :5432 endpoints in DATABASE_URL); the
-      # host port exists only for manual psql from the box, bound to 127.0.0.1 so
-      # the public interface never sees 5432.
-      - "127.0.0.1:5432:5432"
+    ports: !reset []   # 2026-09-11 (ADR-008 consequence): the cellar has NO host door in prod.
+    # ADR-009 fix — use the compose-spec `!reset` tag, not `[]` / `~`:
+    #   • `ports: []` and `ports: ~` are BOTH NO-OPS. Compose MERGES overlay lists
+    #     by APPENDING (unique-key dedupe), so an empty overlay list appends nothing
+    #     and the base `ports` entry ships unchanged. Verified on compose 5.3.
+    #   • `ports: !reset []` CLEARS the base list entirely — the documented, robust
+    #     "remove a base declaration" mechanism. So a prod `up` is doorless EVEN IF
+    #     a dev later re-adds a host port to the base file.
+    # (The prior comment over-claimed that this `[]` line "guards" doorless prod; it
+    #  only ever held because the base *happened* to have no entry. `!reset` is real.)
+    #
+    # Why no door at all instead of a 127.0.0.1 one: 5432 is the universe's
+    # default Postgres port. A host mapping — even 127.0.0.1-pinned — still
+    # BINDS 5432, and `up` dies if anything else on the box owns it (a native
+    # Postgres, a coworker's laptop, a stray container, or yesterday's own
+    # half-attached ghost). 5433/5434 fiddling on 2026-09-03 was this bug in
+    # disguise; the 127.0.0.1 revert of 2026-09-11 only narrowed the blast
+    # radius, not the bug. The app containers never used the door —
+    # DATABASE_URL = postgres:5432, service-name over the internal net — so
+    # removing it costs nothing that ever ran. Manual inspection of prod data
+    # is now deliberate: `docker compose exec postgres psql -U postgres` or an
+    # SSH tunnel.
 
   taskflow-ts:
-    volumes: ~   # replace base's ./ts + :cached node_modules mounts: the image IS the tree
+    volumes: !reset []   # DROP base's ./ts + :cached node_modules mounts: the baked image IS the tree.
     # dev's `pnpm dev` = tsx WATCH. prod runs tsx ONCE: file-watching is a dev-only
     # behavior; a code change in prod means a NEW IMAGE, and Docker's restart policy
     # (below) handles crash-recovery — not a watcher.
@@ -28,7 +44,7 @@ services:
     restart: unless-stopped
 
   taskflow-py:
-    volumes: ~   # replace base's ./py mount + __pycache__ guard: the image IS the tree
+    volumes: !reset []   # DROP base's ./py mount (+ __pycache__ guard): the baked image IS the tree.
     # overrides src/main.py's hard reload=True WITHOUT editing main.py: uvicorn
     # re-imports module `src.main` -> initDb() runs -> startServer(8001) -> the
     # hard 8001 listen in main.ts; the reload flag lives in the run command, so
