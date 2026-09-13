@@ -133,7 +133,7 @@ List any ADRs created or updated today.
 ## Notes
 
 Free-form notes, observations, or anything that doesn't fit above (story-first prose, see Writing Standard above).
-- Prompt file used: `tech-foundry/docs/prompts/2026-08-12-1750.md`
+- Prompt file used: `tech-foundry/docs/prompts/day-XX-[slug]-[date].md` (name of TODAY's prompt, or `master.md` if the day ran from the rules file directly)
 - Roadmap reference: `tech-foundry/docs/roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`
 - Any deviations from the planned day
 - Ideas for future days
