@@ -1,2 +1,7 @@
+# pnpm settings file — in pnpm 11+ this is the ONLY home for settings (the
+# package.json `pnpm` block is no longer read), even for a single package:
+# no `packages` key = the root package is the whole workspace (legal in pnpm >= 11;
+# pnpm 9 hard-errors on the omission — "packages field missing or empty" — so every
+# environment that installs here must run pnpm >= 11, pinned via `packageManager`).
 allowBuilds:
-  esbuild: true
+  esbuild: true   # approve esbuild's postinstall unversioned → covers current and future esbuild

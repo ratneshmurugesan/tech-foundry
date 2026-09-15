@@ -34,9 +34,15 @@ jobs:
         working-directory: apps/taskflow/ts
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4       # Pinned v4 (pnpms' official Node22-compatible release) — v5 is a later line; v4 is the stable major.
+      - uses: pnpm/action-setup@v4       # Pinned v4 — Node22-compatible line
         with:
-          version: 9
+          # Exact pin, NOT a range: must equal `packageManager` in apps/taskflow/ts/package.json
+          # and must be able to read this repo's pnpm-lock.yaml (lockfileVersion 9.0, written by 11.24.0).
+          # >= 11 is load-bearing, not hygiene: ts/ carries a pnpm-workspace.yaml — the only place
+          # pnpm 11+ reads build-approval (`allowBuilds`) — with NO `packages` key (single-package dir).
+          # pnpm 9 hard-errors on that omission ("packages field missing or empty" = the original CI
+          # break); pnpm >= 11 treats omitted `packages` as "root package only". Never downgrade below 11.
+          version: 11.24.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22               # matches the Dockerfile / local

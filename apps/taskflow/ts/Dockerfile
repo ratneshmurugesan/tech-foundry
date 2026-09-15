@@ -15,7 +15,9 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 
 # ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable && corepack prepare pnpm@latest --activate && pnpm install --frozen-lockfile
+# Pin = the `packageManager` field in package.json = the lockfile's writer.
+# (NOT `@latest` — a fresh "latest" per image build is exactly the local/CI drift that broke this.)
+RUN corepack enable && corepack prepare pnpm@11.24.0 --activate && pnpm install --frozen-lockfile
 
 # RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
