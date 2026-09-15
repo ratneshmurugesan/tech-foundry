@@ -40,7 +40,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22               # matches the Dockerfile / local
-          cache: pnpm                    # cache key → pnpm-lock.yaml
+          cache: "pnpm"
+          project: apps/taskflow/ts      # nested lockfile — job-level `run.working-directory` does NOT apply to `uses:` actions; the action resolves paths relative to the repo root
       - run: pnpm install --frozen-lockfile   # lockfile discipline: fail if package.json and lock drift
       - run: pnpm exec tsc --noEmit             # gate 1: a TYPE regression fails here
       - run: pnpm exec vitest run                 # gate 2: a BEHAVIOR regression fails here  (independent of tsc)
