@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
 
-from .errors import NotFoundError, ConflictError
+from .errors import NotFoundError, ConflictError, DatabaseCrashError
 
 logger = logging.getLogger("app")
 
@@ -53,13 +53,27 @@ def register_error_handlers(app: FastAPI):
             }
         )
 
+    @app.exception_handler(DatabaseCrashError)
+    async def database_crash_exception_handler(request: Request, exc: Exception):
+        logger.error("Internal Server Error Occurred", exc_info=exc)
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                    "statusCode": 500,
+                    "error": "Internal Server Error",
+                    "message": exc.message
+            }
+        )
+
+
     # 4. Fallback for DB Crashes and Uncaught Exceptions (HTTP 500)
     @app.exception_handler(Exception)
     async def universal_exception_handler(request: Request, exc: Exception):
         # Securely logs the raw Python traceback to standard output/file internally
         logger.error("Internal Server Error Occurred", exc_info=exc)
 
-            # Returns an opaque, sanitized response ensuring zero data leaks
+        # Returns an opaque, sanitized response ensuring zero data leaks
         return JSONResponse(
             status_code=500,
             content={

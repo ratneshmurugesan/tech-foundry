@@ -13,6 +13,13 @@ register_error_handlers(app)
 
 repo = PostgresRepository()
 
+@app.get("/", status_code=200)
+async def get_root():
+    try:
+        return {"status": "ok", "service": "taskflow"}
+    except Exception as db_error:
+            raise DatabaseCrashError(db_error)
+
 @app.get("/workspaces", status_code=200)
 async def get_workspaces() -> List[Workspace]:
     try:

@@ -1,4 +1,4 @@
-from pydantic  import BaseModel, Field, field_validator
+from pydantic  import BaseModel, Field, field_validator, ConfigDict
 from uuid import uuid4
 from datetime import datetime
 from typing import Optional
@@ -10,8 +10,7 @@ class Workspace(BaseModel):
     name: str = Field(min_length=3)
     created_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        from_attributes = True # This enables Workspace.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
 
 
 class Project(BaseModel):
@@ -20,8 +19,7 @@ class Project(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     workspace_id: str = Field(..., description="workspaceId")
 
-    class Config:
-        from_attributes = True # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
 
 class Issue(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
@@ -30,8 +28,8 @@ class Issue(BaseModel):
     status: str = Field(default="open", description="status")
     created_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        from_attributes = True # This enables Issue.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+
 
     @field_validator("status")
     @classmethod
@@ -42,27 +40,28 @@ class Issue(BaseModel):
 
 class CreateWorkspace(BaseModel):
     name: str = Field(min_length=3)
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+
 
 class UpdateWorkspace(BaseModel):
     name: Optional[str] | None = None
-    class Config:
-        from_attributes = True
 
-        
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
 
 class CreateProject(BaseModel):
     workspace_id: str = Field(..., description="workspaceId")
     name: str = Field(min_length=3)
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+
 
 class UpdateProject(BaseModel):
     workspace_id: Optional[str] | None = Field(default=None, description="workspaceId")
     name: Optional[str] | None = None
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+
 
 
 
@@ -77,8 +76,9 @@ class UpdateIssue(BaseModel):
     project_id: Optional[str] | None = Field(default=None, description="projectId")
     title: Optional[str] | None = None
     status: Optional[str] | None = Field(default="open", description="status")
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)  # This enables Project.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.
+
     @field_validator("status")
     @classmethod
     def validate_status(cls, value: str) -> str:
