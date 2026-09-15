@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push: { branches: ["*"]}
+  pull_request: { branches: ["*"]}
+  # DEPRETION NOTE: * / * duplicates for now; a single refspec is fine for a single-branch phase.
+
+concurrency:  # cancel superseded runs — free-tier cost hygiene
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-py:
+    name: Python - pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/taskflow/py
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                 # needed by uv (git refs) — cheap
+      - uses: astral-sh/setup-uv@v7      # Pinned v7 — the uv-native setup action (PROMOTION from 2026-08-25 rule)
+      - name: Sync (uv-managed venv)
+        run: uv sync --frozen            # --frozen: trust the committed uv.lock; fail if drifted
+      - name: Run pytest
+        run: uv run pytest -q
+      # NO `services: postgres` — by design (ADR-010): CI is zero-service; in-process ASGI is the boundary.
+  test-ts:
+    name: TypeScript — tsc + vitest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/taskflow/ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4       # Pinned v4 (pnpms' official Node22-compatible release) — v5 is a later line; v4 is the stable major.
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22               # matches the Dockerfile / local
+          cache: pnpm                    # cache key → pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile   # lockfile discipline: fail if package.json and lock drift
+      - run: pnpm exec tsc --noEmit             # gate 1: a TYPE regression fails here
+      - run: pnpm exec vitest run                 # gate 2: a BEHAVIOR regression fails here  (independent of tsc)
