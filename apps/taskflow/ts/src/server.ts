@@ -23,17 +23,17 @@ const workspaceSchema = z.object({
     id: z.uuid(),
     name: z.string().min(3)
 })
-const CreateWorkspaceSchema = workspaceSchema.omit({ id: true })
-const UpdateWorkspaceSchema = CreateWorkspaceSchema.partial()
-const IdParamSchema = z.object({ id: z.uuid() });
+const createWorkspaceSchema = workspaceSchema.omit({ id: true })
+const updateWorkspaceSchema = createWorkspaceSchema.partial()
+const idParamSchema = z.object({ id: z.uuid() });
 
 const projectSchema = z.object({
     id: z.uuid(),
     name: z.string().min(3),
     workspace_id: z.uuid()
 })
-const CreateProjectSchema = projectSchema.omit({ id: true })
-const UpdateProjectSchema = CreateProjectSchema.partial()
+const createProjectSchema = projectSchema.omit({ id: true })
+const updateProjectSchema = createProjectSchema.partial()
 
 const issueSchema = z.object({
     id: z.uuid(),
@@ -41,9 +41,25 @@ const issueSchema = z.object({
     project_id: z.uuid(),
     status: z.enum(["open", "closed"]),
 })
-const CreateIssueSchema = issueSchema.omit({ id: true }).extend({ status: z.enum(["open", "closed"]).optional().default("open") })
-const UpdateIssueSchema = CreateIssueSchema.partial()
+const createIssueSchema = issueSchema.omit({ id: true }).extend({ status: z.enum(["open", "closed"]).optional().default("open") })
+const updateIssueSchema = createIssueSchema.partial()
 
+
+app.get("/", {
+    schema: {
+        response: {
+            200: z.object({ status: z.string() }),
+        }
+    }
+}, async (request, response) => {
+    try {
+        return response.code(200).send({
+            status: 'ok'
+        }) 
+    } catch (dbError) {
+        throw new DatabaseCrashError(dbError)
+    }
+})
 
 app.get("/workspaces", {
     schema: {
@@ -61,7 +77,7 @@ app.get("/workspaces", {
 })
 app.post("/workspaces", {
     schema: {
-        body: CreateWorkspaceSchema,
+        body: createWorkspaceSchema,
         response: {
             201: workspaceSchema,
         }
@@ -75,10 +91,10 @@ app.post("/workspaces", {
         } catch (dbError) {
             throw new DatabaseCrashError(dbError)
         }
-    })
+})
 app.get("/workspaces/:id", {
     schema: {
-        params: IdParamSchema,
+        params: idParamSchema,
         response: {
             200: workspaceSchema,
         },
@@ -104,8 +120,8 @@ app.get("/workspaces/:id", {
 })
 app.patch("/workspaces/:id", {
     schema: {
-        body: UpdateWorkspaceSchema,
-        params: IdParamSchema,
+        body: updateWorkspaceSchema,
+        params: idParamSchema,
         response: {
             200: workspaceSchema,
         },
@@ -131,7 +147,7 @@ app.patch("/workspaces/:id", {
 })
 app.delete("/workspaces/:id", {
     schema: {
-        params: IdParamSchema,
+        params: idParamSchema,
         response: {
             204: z.void(),
             404: z.object({ error: z.string() }),
@@ -173,7 +189,7 @@ app.get("/projects", {
 })
 app.post("/projects", {
     schema: {
-        body: CreateProjectSchema,
+        body: createProjectSchema,
         response: {
             201: projectSchema,
             404: z.object({
@@ -208,7 +224,7 @@ app.post("/projects", {
 })
 app.get("/projects/:id", {
     schema: {
-        params: IdParamSchema,
+        params: idParamSchema,
         response: {
             200: projectSchema,
             404: z.object({
@@ -237,8 +253,8 @@ app.get("/projects/:id", {
 })
 app.patch("/projects/:id", {
     schema: {
-        body: UpdateProjectSchema,
-        params: IdParamSchema,
+        body: updateProjectSchema,
+        params: idParamSchema,
         response: {
             200: projectSchema,
             404: z.object({
@@ -282,7 +298,7 @@ app.patch("/projects/:id", {
 })
 app.delete("/projects/:id", {
     schema: {
-        params: IdParamSchema,
+        params: idParamSchema,
         response: {
             204: z.void(),
             404: z.object({ error: z.string() }),
@@ -334,7 +350,7 @@ app.get("/issues", {
 })
 app.post("/issues", {
     schema: {
-        body: CreateIssueSchema,
+        body: createIssueSchema,
         response: {
             201: issueSchema,
             404: z.object({
@@ -369,7 +385,7 @@ app.post("/issues", {
 })
 app.get("/issues/:id", {
     schema: {
-        params: IdParamSchema,
+        params: idParamSchema,
         response: {
             200: issueSchema,
             404: z.object({
@@ -395,8 +411,8 @@ app.get("/issues/:id", {
 })
 app.patch("/issues/:id", {
     schema: {
-        body: UpdateIssueSchema,
-        params: IdParamSchema,
+        body: updateIssueSchema,
+        params: idParamSchema,
         response: {
             200: issueSchema,
             404: z.object({
@@ -424,7 +440,7 @@ app.patch("/issues/:id", {
 })
 app.delete("/issues/:id", {
     schema: {
-        params: IdParamSchema,
+        params: idParamSchema,
         response: {
             204: z.void(),
             404: z.object({ error: z.string() }),
@@ -459,4 +475,12 @@ app.delete("/issues/:id", {
 export async function startServer(port: number) {
     await app.listen({ port, host: '0.0.0.0' })
     console.log("http://localhost:" + port)
+}
+
+export { 
+    app,
+    createWorkspaceSchema, 
+    createProjectSchema, 
+    createIssueSchema, 
+    idParamSchema 
 }

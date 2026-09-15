@@ -1,6 +1,6 @@
 import { FastifyError, FastifyInstance } from 'fastify'
 import { ZodError } from 'zod'
-import { ConflictError, NotFoundError } from './errors'
+import { ConflictError, NotFoundError, DatabaseCrashError } from './errors'
 
 export function registerErrorHandler(fastify: FastifyInstance) {
     fastify.setErrorHandler((unknownError: unknown, request, response) => {
@@ -46,6 +46,18 @@ export function registerErrorHandler(fastify: FastifyInstance) {
                 error: 'Conflict',
                 message: error.message,
             });
+        }
+
+        if(error instanceof DatabaseCrashError){
+            request.log.error({
+                err: error.originalError ?? error
+            })
+
+            return response.status(500).send({
+                statusCode: 500,
+                error: 'Internal Server Error',
+                message: error.message,
+            })
         }
 
         // 5. Fallback for DB Crashes and Uncaught Exceptions (HTTP 500)

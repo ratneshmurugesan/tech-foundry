@@ -14,7 +14,7 @@ export class ConflictError extends Error {
 
 export class DatabaseCrashError extends Error {
     constructor(public originalError: unknown) {
-        super('Database op failed interally')
+        super('Database op failed internally')
         this.name = 'DatabaseCrashError'
     }
 }
