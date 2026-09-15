@@ -3,7 +3,7 @@ name: CI
 on:
   push: { branches: ["*"]}
   pull_request: { branches: ["*"]}
-  # DEPRETION NOTE: * / * duplicates for now; a single refspec is fine for a single-branch phase.
+  # DEPRECATION NOTE: * / * duplicates for now; a single refspec is fine for a single-branch phase.
 
 concurrency:  # cancel superseded runs — free-tier cost hygiene
   group: ci-${{ github.workflow }}-${{ github.ref }}
