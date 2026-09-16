@@ -57,11 +57,16 @@ ADRs live separately in `tech-foundry/docs/adrs/` and are referenced by number (
     - ADRs Created
     - Preview of Next day
 
-13. **Never commit code without asking** — stage changes (`git add`), show the diff and proposed commit message, then user will do the rest.
+13. **Never commit code without asking** — show the diff and proposed commit message, then user will do the rest, never ask user for permision to commit, just leave code changes as is.
 
 14. **Docs are the single source of truth — no duplication into agent memory.** Every verified pattern, gotcha, or decision gets written into `docs/` — an ADR for a decision/deviation, a day-note for a session lesson, a prompts rule for a standing process rule — and is *not* also re-stored in agent memory. If an ADR or day-note already owns a practice, do not duplicate it elsewhere (including memory). Agent memory holds only a tiny pointer to where docs live, never the content itself.
 
 15. **`docs/scraps/` is the user's private backup — never read, modify, or promote from it.** Treat it as an inert archive: no edits, no deletions, no reviving its files into live docs or memory, and never cite it as authoritative. The only sanctioned action toward it is to leave it untouched.
+
+16. General and important advice: 
+ - Ask user plenty of questions before making assumptions or doing guesswork. 
+ - Take more time to think and reason through complex responses, but keep explanations crisp and concise.
+ - Always explain technical terms using simple English and connect them to a restaurant analogy whenever possible. Keep explanations clear, practical, and easy to understand and avoid unnecessary fluff.
 
 ---
 
@@ -76,7 +81,7 @@ The AI will:
 1. Load this prompt (rules)
 2. Load the roadmap (context, phase, sprint, day definition)
 3. Check all notes in order in tech-foundry/docs/notes/ to understand whats done and what day is next. compare previous day's preview of next day section to find a conenction between subsequent notes .
-4. Generate the complete day breakdown following all 15 rules
+4. Generate the complete day breakdown following all 16 rules
 5. After execution, generate the notes file at `tech-foundry/docs/notes/`
 6. Day-close final step (before the closeout commit): draft **Day N+1's prompt file** at `tech-foundry/docs/prompts/day-XX-[slug]-[yyyy-mm-dd-hhmm].md`, built from the notes file's "Preview of Next Day" section + the roadmap's next row. It points back at this file (master) and carries the day-specific constraints (options to settle, ADR candidates, deliverables bar, next-day preview). Day notes + ADR + next prompt file are committed together in one closeout commit, so no session ends leaving the next day without its kickoff file.
 
