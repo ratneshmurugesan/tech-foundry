@@ -35,7 +35,7 @@ Proposed → Active → Superseded → Deprecated
 
 ## Writing Standard
 
-ADR prose reads **story first, terms in place** — a non-technical reader should get the *idea* from the picture, then the technical terms confirm it. Applies to Context, Decision, and Consequences prose:
+ADR prose reads **story first, terms in place** — a non-technical reader should get the *idea* from the picture, then the technical terms confirm it. Max 2 concise lines for each bullet point or paragraph. Applies to Context, Decision, and Consequences prose:
 
 - **Open with the picture** — one sentence an outsider can visualize.
 - **Then the terms, verbatim** — the exact technical terms (names, versions, commands) immediately after, unchanged. The picture hangs the idea; the terms are the receipt.

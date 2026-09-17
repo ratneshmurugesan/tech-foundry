@@ -67,7 +67,7 @@ ADRs live separately in `tech-foundry/docs/adrs/` and are referenced by number (
  - Always create to-do list immediately according to your plan; keep track of them and update thier status appropriately - complete one by one quickly - after completeing each todo ask user to verify if required - then you move forward to next todo item; never loop back to completed todo item -  stop the continous verify-loop if you are in it and conclude.
  - Ask user plenty of questions before making assumptions, relying on guesswork, or when stuck in a verification loop.
  - Keep explanations crisp and concise.
- - Always explain technical terms using simple English and connect them to a restaurant analogy whenever possible. Keep explanations clear, practical, and easy to understand and avoid unnecessary fluff.
+ - Always explain technical terms using simple layman-term english that a 5-year old kid can understand and connect them to a restaurant analogy all the time. Keep explanations clear, practical, and easy to understand and avoid unnecessary fluff.
 
 ---
 

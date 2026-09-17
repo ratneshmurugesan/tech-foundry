@@ -44,10 +44,10 @@
 
 ## Blocked / deferred (carried to next day)
 
-- **The `node_modules` mount is a dev shortcut** — clean locally (no rebuild on a code edit), but the *deploy* must resolve it definitively: embed deps in the image, or `pnpm install` on the Oracle box. **Day-6 gate ①.**
+- **The `node_modules` mount is a dev shortcut** — clean locally (no rebuild on a code edit), but the *deploy* must resolve it definitively: embed deps in the image, or `pnpm install` on the AWS box. **Day-6 gate ①.**
 - **`uv.lock` version-pinning** in `py/Dockerfile` (drift risk, above). **Day-6 gate ②.**
 - **The named volume is now live** — `down -v` on the *production* box would wipe a real DB (the Day-3 cellar lesson, at stakes). The deploy recipe needs an explicit "this is your data" step. **Day-6 gate ③.**
-- **`8000`/`8001` → a public URL** — the compose maps to localhost today; the deploy maps it to the Oracle host. **Day-6** (and the `127.0.0.1` healthcheck must keep pointing *inward* when the app is public).
+- **`8000`/`8001` → a public URL** — the compose maps to localhost today; the deploy maps it to the AWS host. **Day-6** (and the `127.0.0.1` healthcheck must keep pointing *inward* when the app is public).
 
 ## Commands run
 
@@ -77,8 +77,8 @@ The full session was a build/debug gauntlet across `apps/taskflow/` (reconstruct
 
 ## Preview: Day 6 (connect)
 
-- **Roadmap §Sprint 1 Day 6**: "Deploy to Oracle Free Tier — SSH in, `docker compose up -d`, curl the URL." The restaurant leaves the kitchen: the *exact* `docker compose up` that opens it here opens it on a **$0 Oracle VM**.
+- **Roadmap §Sprint 1 Day 6**: "Deploy to Oracle Free Tier — SSH in, `docker compose up -d`, curl the URL." (The roadmap named the *target class* — a $0 VM, and its Oracle Free Tier tier was an *aspirational* plan; the box that actually shipped it was an **AWS EC2** `free_tier` VM: us-east-1, 2 vCPU ARM / 1GB, `54.208.101.60` — reverse DNS `ec2-…compute.amazonaws.com`. Same $0 economics, different cloud; the deploy recipe is provider-agnostic and never *touches* the provider.) The restaurant leaves the kitchen: the *exact* `docker compose up` that opens it here opens it on a **$0 AWS VM**.
 - **The Day-5 stack *is* the deploy artifact** — so the deferred gates above become **Day-6's entry cost** in order: ① resolve the `node_modules` story (embed in the image vs install-on-server), ② pin `uv` in `py/Dockerfile` so the *server* resolves the same tree, ③ `8000`/`8001` → the public host URL.
-- **The cellar is now at stakes** — `down -v` on the *production* box wipes a real DB forever; the deploy recipe carries an explicit data-backup step, and the `127.0.0.1` healthcheck keeps peering *inward* once the app is public. **Bar**: `curl https://<oracle-host>/workspaces` returns the 12/11 rows after one `docker compose up -d` on the VM.
+- **The cellar is now at stakes** — `down -v` on the *production* box wipes a real DB forever; the deploy recipe carries an explicit data-backup step, and the `127.0.0.1` healthcheck keeps peering *inward* once the app is public. **Bar**: `curl http://<aws-host>/workspaces` returns the 12/11 rows after one `docker compose up -d` on the VM.
 - **ADR-006** owns the dev-stack record; a **deploy** ADR lands in the Day-6 note's ADRs section.
 - **"Watch out for"** — the *same* image-vs-mount drift that bit the Docker build will bite the **server** deploy if the `node_modules` story is left to luck.

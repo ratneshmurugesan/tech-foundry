@@ -4,6 +4,8 @@
 > **Purpose**: Single source of truth. Survives workspace switches. Say "Read `roadmaps/v4/foundry-roadmap-v4-2026-08-10-2130.md`" to restore full context.
 > **Location**: `roadmaps/v4/foundry-roadmap-v4-2026-08-10-2130.md`
 
+> **⚠️ Plan-deviation note (live reality, added 2026-09-17).** The "Oracle Free Tier" target in the Day 6 row was the *plan*; the live deploys were on **AWS Free Tier EC2** (`54.208.101.60`, us-east-1). Same provider-agnostic recipe — reads as *"$0 VM of your choice"*. See `notes/day-06-aws-deploy-2026-09-11-1718.md` (the deploy of record).
+
 ---
 
 ## Core Philosophy: "Ship Thin, Deepen Later"

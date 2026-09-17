@@ -5,6 +5,8 @@
 > **Consolidates**: v1 (architecture, decisions, CNCF) + v2 (OSS analysis, Phase 1 deep dive, Taskflow, business psychology)
 > **Location**: `roadmaps/v3/foundry-roadmap-v3-2026-08-08-2222.md`
 
+> **⚠️ Plan-deviation note (live reality, added 2026-09-17).** The "Oracle Free Tier" mentions in this draft were the *plan*. The live deploy of record is `notes/day-06-aws-deploy-2026-09-11-1718.md` — an **AWS** box (`54.208.101.60`, us-east-1), not Oracle. The recipe is provider-agnostic; "Oracle Free Tier" reads as *"$0 Free Tier VM"* wherever it appears.
+
 ---
 
 ## 1. Vision & Workspace Structure
