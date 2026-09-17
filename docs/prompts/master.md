@@ -64,8 +64,9 @@ ADRs live separately in `tech-foundry/docs/adrs/` and are referenced by number (
 15. **`docs/scraps/` is the user's private backup — never read, modify, or promote from it.** Treat it as an inert archive: no edits, no deletions, no reviving its files into live docs or memory, and never cite it as authoritative. The only sanctioned action toward it is to leave it untouched.
 
 16. General and important advice: 
- - Ask user plenty of questions before making assumptions or doing guesswork. 
- - Take more time to think and reason through complex responses, but keep explanations crisp and concise.
+ - Always create to-do list immediately according to your plan; keep track of them and update thier status appropriately - complete one by one quickly - after completeing each todo ask user to verify if required - then you move forward to next todo item; never loop back to completed todo item -  stop the continous verify-loop if you are in it and conclude.
+ - Ask user plenty of questions before making assumptions, relying on guesswork, or when stuck in a verification loop.
+ - Keep explanations crisp and concise.
  - Always explain technical terms using simple English and connect them to a restaurant analogy whenever possible. Keep explanations clear, practical, and easy to understand and avoid unnecessary fluff.
 
 ---
