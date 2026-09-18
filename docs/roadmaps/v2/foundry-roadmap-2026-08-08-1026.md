@@ -6,6 +6,8 @@ Summary: Export of the current Copilot chat session conversation for use in anot
 
 ---
 
+> **⚠️ Provider-label pointer (unified 2026-09-17).** This file is a *raw chat export* — every "Oracle Free Tier" reference in it is a *planning artifact* from a session whose *aspiration* was Oracle Cloud. The box that *actually* hosts the Foundry deploy (Day 6, 2026-09-11) is an **AWS Free Tier** EC2 instance (`54.208.101.60`, us-east-1 — no Oracle Cloud account was ever used). Read every "Oracle" below as *"$0 Free Tier VM of your choice"* — the recipe is provider-agnostic. The live deploy of record is `../notes/day-06-aws-deploy-2026-09-11-1718.md`; the labels are *retained* in this source export rather than rewritten.
+
 ## User — 2026-08-08T04:51:40.875Z
 
 go through each microservice folders and list down the system/software architecture and principles and patterns used

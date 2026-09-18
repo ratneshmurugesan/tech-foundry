@@ -41,5 +41,5 @@
 ## Notes
 
 - Prompt file: `tech-foundry/docs/prompts/2026-08-12-1750.md`
-- Roadmap reference: `tech-foundry/docs/roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`
+- Roadmap reference: `tech-foundry/docs/roadmaps/v4/master.md`
 - Key rule learned: Rule 3 ("Never write actual code unless explicitly asked") must be enforced before generating day content

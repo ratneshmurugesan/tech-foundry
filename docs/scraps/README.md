@@ -2,7 +2,7 @@
 
 **Phase**: Sprint 1 — Make it Work (Weeks 1-2)
 **Dual Track**: TypeScript (`ts/`) + Python (`py/`)
-**Roadmap**: See `../../../roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`
+**Roadmap**: See `../../../roadmaps/v4/master.md`
 
 ## Structure
 
@@ -33,5 +33,5 @@ taskflow/
 - [ ] Day 3: PostgreSQL schema
 - [ ] Day 4: CRUD operations
 - [ ] Day 5: Docker Compose
-- [ ] Day 6: Deploy to Oracle
+- [ ] Day 6: Deploy to Oracle / AWS
 - [ ] Day 7: GitHub Actions CI

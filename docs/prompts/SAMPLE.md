@@ -1,4 +1,4 @@
-"Before we begin with roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md, follow these rules for every day's pseudocode:
+"Before we begin with roadmaps/v4/master.md, follow these rules for every day's pseudocode:
 
 Write complete pseudocode using your intelligence — short-medium sized, unrepeated, with enhanced readability for all micro steps.
 Include detailed comments for each task explaining the why (architecture, DDD concept, OSS reference, dual-language parallel).

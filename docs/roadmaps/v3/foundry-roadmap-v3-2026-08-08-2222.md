@@ -5,7 +5,7 @@
 > **Consolidates**: v1 (architecture, decisions, CNCF) + v2 (OSS analysis, Phase 1 deep dive, Taskflow, business psychology)
 > **Location**: `roadmaps/v3/foundry-roadmap-v3-2026-08-08-2222.md`
 
-> **⚠️ Plan-deviation note (live reality, added 2026-09-17).** The "Oracle Free Tier" mentions in this draft were the *plan*. The live deploy of record is `notes/day-06-aws-deploy-2026-09-11-1718.md` — an **AWS** box (`54.208.101.60`, us-east-1), not Oracle. The recipe is provider-agnostic; "Oracle Free Tier" reads as *"$0 Free Tier VM"* wherever it appears.
+> **⚠️ Provider-label correction (unified 2026-09-17).** This plan was written against the **Oracle Free Tier** — that was the *plan*. The box that *actually* hosts it is an **AWS Free Tier** EC2 instance (`54.208.101.60`, us-east-1 — reverse DNS `ec2-54-208-101-60.compute-1.amazonaws.com`; no Oracle Cloud account was ever used); the *tier class* (a $0 ARM VM, "Free Tier") is the point. Everything in the plan is *provider-agnostic* — `docker compose` on a $0 VM; the only real provider coupling is security-group naming (**"Security List"** → **Security Group**), which the plan already uses its AWS form of. Per the user, every in-line "Oracle Free Tier" label below is replaced with the neutral *"$0 Free Tier VM"* (target-class phrasing) — the provider *actually* used lives in `../notes/day-06-aws-deploy-2026-09-11-1718.md` (the deploy of record).
 
 ---
 
@@ -143,14 +143,14 @@ Each template maps to real OSS patterns from the 12-repo analysis.
 | Month | Topic | Project |
 |---|---|---|
 | 5 | Docker, multi-stage builds | Dockerize Taskflow |
-| 6 | Terraform, Oracle Free Tier | Provision VM |
+| 6 | Terraform, $0 Free Tier VM | Provision VM |
 | 7 | GitHub Actions, CI/CD | CI with mock-dependency pattern |
 | 8 | GitOps, ArgoCD | Auto-deploy on merge |
 
 ### Phase 3: Kubernetes (Months 9-12) — $0/month
 | Month | Topic | Project |
 |---|---|---|
-| 9 | K3s on Oracle, Helm | Deploy Taskflow to K3s |
+| 9 | K3s on $0 Free Tier VM, Helm | Deploy Taskflow to K3s |
 | 10 | Ingress, Traefik | Traefik routing |
 | 11 | Service mesh, mTLS | mTLS between services |
 | 12 | Horizontal scaling | Auto-scale Taskflow |
@@ -189,7 +189,7 @@ Each template maps to real OSS patterns from the 12-repo analysis.
 | 29 | Plugin architectures | Plugin system |
 | 30 | Open source release | Release SoloStack |
 
-**Total Cost**: $0-50/month. All within Oracle Free Tier + free tiers of SaaS tools.
+**Total Cost**: $0-50/month. All within $0 Free Tier + free tiers of SaaS tools.
 
 ---
 

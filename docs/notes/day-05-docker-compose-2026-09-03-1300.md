@@ -2,7 +2,7 @@
 
 > **Generated**: 2026-09-04 (EOD) · **Executed**: Aug 28 → Sep 3, 2026
 > **Phase**: Phase 1 — Make it Work · **Sprint 1** (Week 2) · **Stack**: Taskflow (REST API)
-> **Reference**: `tech-foundry/docs/roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`
+> **Reference**: `tech-foundry/docs/roadmaps/v4/master.md`
 > **ADR Reference**: `tech-foundry/docs/adrs/` (ADR-006 is the canonical record; ADRs not committed here)
 
 ---

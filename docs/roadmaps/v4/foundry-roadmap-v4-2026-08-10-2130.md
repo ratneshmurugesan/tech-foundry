@@ -169,7 +169,7 @@ Each template maps to real OSS patterns from the 12-repo analysis. You'll build 
 | 3 | Add PostgreSQL, basic schema | Plane (`workspace_id` pattern) | 3 tables: workspaces, projects, issues |
 | 4 | CRUD operations, Drizzle/asyncpg | Ghost (migrations) | Create, read, update for all 3 entities |
 | 5 | Docker Compose (Postgres + app) | Streamlit (Docker basics) | `docker compose up` starts everything |
-| 6 | Deploy to Oracle Free Tier | — | SSH in, `docker compose up -d`, curl the URL |
+| 6 | Deploy to a $0 Free Tier VM | — | SSH in, `docker compose up -d`, curl the URL (live: AWS — see note below) |
 | 7 | Basic GitHub Actions CI | — | `pytest` + `tsc --noEmit` on push |
 
 **End of Sprint 1**: You have a URL that returns JSON. It's not secure, not tested, not pretty. But it's *deployed*. 🎉
@@ -662,15 +662,17 @@ CREATE TABLE issues (
 
 ---
 
-### Day 6: Deploy to Oracle Free Tier
+### Day 6: Deploy to a $0 Free Tier VM *(plan: Oracle — see note below)*
 
 **Implement**:
-- Create Oracle Free Tier VM (4 ARM cores, 24GB RAM — free forever)
+- Create the Free Tier VM — the plan said *Oracle* (4 ARM cores, 24GB RAM, free forever; the *tier class* = AWS's equivalent `a1` ARM family is the same idea)
 - SSH in, install Docker
 - `git clone`, `docker compose up -d`
 - Note the public IP, `curl <IP>:3000/workspaces`
 
 **Verify**: You can access your API from your phone's browser. 🎉
+
+> **Live outcome (what actually shipped, 2026-09-11):** the box was **AWS Free Tier EC2** — `54.208.101.60` (us-east-1), 2 vCPU ARM / 1GB. It already existed; "create a VM" was moot. The full recipe — base+overlay compose, the 5432 door-removal (ADR-008), the `0.0.0.0:8000/8001` storefront, the `git`-tip check, the phone-curl — is recorded in `../notes/day-06-aws-deploy-2026-09-11-1718.md`. The *plan-Oracle* label here is a planning artifact; the *live*-AWS note is the record.
 
 ---
 

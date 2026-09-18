@@ -2,7 +2,7 @@
 
 > **Generated**: 2026-08-12
 > **Purpose**: Master prompt for daily execution. Say "Read `tech-foundry/docs/prompts/master.md`" to restore full context.
-> **Roadmap Reference**: `tech-foundry/docs/roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`
+> **Roadmap Reference**: `tech-foundry/docs/roadmaps/v4/master.md`
 > **ADR Reference**: `tech-foundry/docs/adrs/` (roadmap-level decisions, not per-day)
 
 ---
@@ -76,7 +76,7 @@ ADRs live separately in `tech-foundry/docs/adrs/` and are referenced by number (
 Every day's prompt file lives in `docs/prompts/`, named `day-XX-[slug]-[yyyy-mm-dd-hhmm].md` (same stem family as the notes) or a dateless `master.md` for this rules file.
 
 To start any day, say:
-> "Read `tech-foundry/docs/prompts/day-XX-[slug]-[date].md` and `tech-foundry/docs/roadmaps/v4/foundry-roadmap-v4-2026-08-11-1840.md`, then give me what's next"
+> "Read `tech-foundry/docs/prompts/day-XX-[slug]-[date].md` and `tech-foundry/docs/roadmaps/v4/master.md`, then give me what's next"
 
 The AI will:
 1. Load this prompt (rules)
