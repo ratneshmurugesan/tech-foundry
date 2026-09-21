@@ -1,10 +1,9 @@
 import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
 
-from .errors import NotFoundError, ConflictError, DatabaseCrashError
+from .errors import NotFoundError, ConflictError, DatabaseCrashError, UnauthorizedError
 
 logger = logging.getLogger("app")
 
@@ -66,6 +65,18 @@ def register_error_handlers(app: FastAPI):
             }
         )
 
+    @app.exception_handler(UnauthorizedError)
+    async def unauthorized_exception_handler(request: Request, exc: Exception):
+        logger.error("Unauthorized", exc_info=exc)
+
+        return JSONResponse(
+            status_code=401,
+            content={
+                    "statusCode": 401,
+                    "error": "Unauthorized",
+                    "message": exc.message
+            }
+        )
 
     # 4. Fallback for DB Crashes and Uncaught Exceptions (HTTP 500)
     @app.exception_handler(Exception)

@@ -1,6 +1,6 @@
 import { FastifyError, FastifyInstance } from 'fastify'
 import { ZodError } from 'zod'
-import { ConflictError, NotFoundError, DatabaseCrashError } from './errors'
+import { ConflictError, NotFoundError, DatabaseCrashError, UnauthorizedError } from './errors'
 
 export function registerErrorHandler(fastify: FastifyInstance) {
     fastify.setErrorHandler((unknownError: unknown, request, response) => {
@@ -48,7 +48,7 @@ export function registerErrorHandler(fastify: FastifyInstance) {
             });
         }
 
-        if(error instanceof DatabaseCrashError){
+        if (error instanceof DatabaseCrashError) {
             request.log.error({
                 err: error.originalError ?? error
             })
@@ -56,6 +56,18 @@ export function registerErrorHandler(fastify: FastifyInstance) {
             return response.status(500).send({
                 statusCode: 500,
                 error: 'Internal Server Error',
+                message: error.message,
+            })
+        }
+
+        if (error instanceof UnauthorizedError) {
+            request.log.error({
+                err: error.message ?? error
+            })
+
+            return response.status(401).send({
+                statusCode: 401,
+                error: 'Unauthorized',
                 message: error.message,
             })
         }

@@ -4,6 +4,7 @@ import z from 'zod'
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod'
 import { registerErrorHandler } from './errorHandler'
 import { DatabaseCrashError, NotFoundError } from './errors'
+import { doorHook } from './auth'
 
 const repo = new PostgresRepository()
 
@@ -14,7 +15,9 @@ fastify.setValidatorCompiler(validatorCompiler)
 fastify.setSerializerCompiler(serializerCompiler)
 
 // Setting Zod as the default Type Provider
-const app = fastify.withTypeProvider<ZodTypeProvider>()
+const app = fastify
+    .addHook("onRequest", doorHook)
+    .withTypeProvider<ZodTypeProvider>()
 
 // Registering custom semantic error handler
 registerErrorHandler(app)
@@ -48,14 +51,15 @@ const updateIssueSchema = createIssueSchema.partial()
 app.get("/", {
     schema: {
         response: {
-            200: z.object({ status: z.string() }),
+            200: z.object({ status: z.string(), service: z.string() }),
         }
     }
 }, async (request, response) => {
     try {
         return response.code(200).send({
-            status: 'ok'
-        }) 
+            status: 'ok',
+            service: 'taskflow-ts'
+        })
     } catch (dbError) {
         throw new DatabaseCrashError(dbError)
     }
@@ -91,7 +95,7 @@ app.post("/workspaces", {
         } catch (dbError) {
             throw new DatabaseCrashError(dbError)
         }
-})
+    })
 app.get("/workspaces/:id", {
     schema: {
         params: idParamSchema,
@@ -477,10 +481,10 @@ export async function startServer(port: number) {
     console.log("http://localhost:" + port)
 }
 
-export { 
+export {
     app,
-    createWorkspaceSchema, 
-    createProjectSchema, 
-    createIssueSchema, 
-    idParamSchema 
+    createWorkspaceSchema,
+    createProjectSchema,
+    createIssueSchema,
+    idParamSchema
 }

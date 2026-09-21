@@ -13,3 +13,9 @@ class DatabaseCrashError(Exception):
         self.message = "Database op failed internally"
         self.original_error = original_error
         super().__init__(self.message)
+
+class UnauthorizedError(Exception):
+    def __init__(self, message: str = "Unauthorized"):
+        self.message = message
+        super().__init__(self.message)
+

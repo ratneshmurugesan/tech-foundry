@@ -9,4 +9,4 @@ async def test_root_returns_200(client):
 
     data = r.json()
     assert data.get("status") == "ok"
-    assert data.get("service") == "taskflow"
+    assert data.get("service") == "taskflow-py"

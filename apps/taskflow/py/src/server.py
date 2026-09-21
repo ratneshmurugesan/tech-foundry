@@ -1,14 +1,26 @@
 from fastapi import FastAPI, Path, Query
-from typing import List , Literal
+from typing import List
+from contextlib import asynccontextmanager
 
 from .repository import PostgresRepository
 from .types import Workspace, CreateWorkspace, UpdateWorkspace, Project,  CreateProject, UpdateProject, Issue, CreateIssue, UpdateIssue
 from .error_handlers import register_error_handlers
 from .errors import DatabaseCrashError, NotFoundError
+from .auth import AuthenticateBadgeMiddleware
 
 __all__ = ["app"]
 
-app = FastAPI(title="Taskflow API - Day 3 with PostgreSQL")
+@asynccontextmanager
+async def lifespan (app: FastAPI):
+    from .db import init_db
+    await init_db()
+    print("Application is starting up...")
+    print("Taskflow API running on port 8001")
+    yield
+    print("Application is shutting down...")
+
+app = FastAPI(title="Taskflow API - Day 3 with PostgreSQL", lifespan=lifespan)
+app.add_middleware(AuthenticateBadgeMiddleware)
 register_error_handlers(app)
 
 repo = PostgresRepository()
@@ -16,7 +28,7 @@ repo = PostgresRepository()
 @app.get("/", status_code=200)
 async def get_root():
     try:
-        return {"status": "ok", "service": "taskflow"}
+        return {"status": "ok", "service": "taskflow-py"}
     except Exception as db_error:
             raise DatabaseCrashError(db_error)
 
@@ -240,10 +252,3 @@ async def delete_issues(
          raise NotFoundError(f"Issue with ID {id} does not exist")
 
     return is_deleted
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    from .db import init_db
-    await init_db()
-    print("Taskflow API running on port 8001")
