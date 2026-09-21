@@ -9,7 +9,7 @@
 
 ## Rules for Every Day's Pseudocode
 
-1. **Write complete pseudocode** using your intelligence — no-code, only words, bullet point sentences, short sized, unrepeated, with context aware colored words, max 120 words each with enhanced readability for all micro steps.
+1. **Write complete pseudocode** using your intelligence — no-code, only words, bullet point sentences, short sized, unrepeated, with context aware colored words, max 120 words each with enhanced readability for all micro steps. Structure the pseudocode so that, when converted into code, it remains testable across different testing architectures. Maintain a strong separation of concerns by keeping responsibilities clearly divided, allowing individual components to be developed, tested, replaced, and maintained independently.
 
 2. **Include detailed comments** for each task explaining the *why*:
    - Architecture rationale (3-category workspace, monorepo end state, dual-language track)
@@ -17,7 +17,7 @@
    - OSS reference (which of the 12 repos models this pattern)
    - Dual-language parallel (how the same concept maps between TypeScript and Python)
 
-3. **Never write actual code** by yourself unless explicitly asked for it and write optimized pseudo code.
+3. **Never write actual code** by yourself unless explicitly asked for it and write optimized pseudo code. Structure the code so that it remains testable across different testing architectures. Maintain a strong separation of concerns by keeping responsibilities clearly divided, ensuring that individual components can be developed, tested, replaced, and maintained independently.
 
 4. **Show the file and folder structure** you're proposing — never create any files or folders by yourself.
 
