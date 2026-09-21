@@ -214,7 +214,10 @@ describe("doorHook — one choke point, via fastify.inject (no external network)
         app.get("/docs", () => ({ ok: 2 }))
         app.get("/redoc", () => ({ ok: 2 }))
         app.get("/openapi.json", () => ({ ok: 3 }))
-        for (const url of ["/", "/docs", "/redoc", "/openapi.json"]) {
+        app.get("/health", () => ({ ok: 4 }))
+        // The PUBLIC_PATHS *set* mirrors the PY kitchen exactly; the test list stubs
+        // every lighthouse because Fastify ships no /redoc (the PY test omits it as FastAPI does).
+        for (const url of ["/", "/docs", "/redoc", "/openapi.json", "/health"]) {
             expect((await app.inject({ method: "GET", url })).statusCode).toBe(200)
         }
     })
