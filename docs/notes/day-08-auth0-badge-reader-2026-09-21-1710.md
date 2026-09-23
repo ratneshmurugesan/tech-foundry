@@ -1,43 +1,169 @@
-# Day 08 — Auth0 the Badge Reader, and the lighthouse parity crack (Day 8 of the Foundry)
+# Day 08 — Auth0: the Badge Reader (Day 8 of the Foundry)
+
+---
+
+**TL;DR**
+- Both counters now verify Auth0 JWTs: **one thin door** (Fastify `onRequest` hook / FastAPI `BaseHTTPMiddleware`) in front of **one pure badge reader** (`verifyBadge(token, tenant, audience)`).
+- **Parity now runs on the *strings*:** both tracks map their native JWT errors to the **same six 401 messages**. A different message by kitchen fails the suite.
+- **The day's one real code delta:** TS `PUBLIC_PATHS` was missing `/health` — the lighthouse that CI and load balancers probe would have 401'd on the TS counter. Fixed + 2 tests.
+- **Status:** TS 30/30, PY 18/18, `tsc` clean. The zero-service CI gate is **unchanged** (JWKS read is stubbed in tests; no `AUTH0_DOMAIN` = doorless).
+- **Named debt:** the *live* JWKS path (real domain, real HTTPS) is untested in CI — deferred to Phase 2 (ADR-011).
+
+---
 
 ## Built
 
-- **The house got its front door, and the street didn't notice.** Both counters bolt on a *reader* — the **TS door** is a Fastify **`onRequest` hook** (`.addHook("onRequest", doorHook)` in `server.ts`); the **PY door** is a **`BaseHTTPMiddleware`** (`.add_middleware(...)` in `server.py`). Each is *one* global reader at the *front of the house* — not a per-room lock — that reads the **`Authorization: Bearer <token>`** header, runs a *pure* **`verifyBadge(token, tenant, audience)`**, and on failure returns the **ADR-007 envelope** with a **401**. A *pure verifier* behind a *thin door* is the shape: the reader (HTTP: header + tenant + audience + envelope) is the kitchen skin; the *badge reader* (token in, payload-or-throw out) is the **parity wall** — same inputs, same failure semantics, only the crypto differs.
-- **The reader was *already* here in stub form — Day 8 replaces the stub with a real JWKS check.** The Day 3 `auth.ts` / `auth.py` returned a literal `{ sub: "dev" }` (the *doorless* reader). Day 8 *demotes, not deletes* it: the stub survives **only** as the `if (!process.env.AUTH0_DOMAIN) return` **doorless path** (ADR-008's shape). On a *configured* tenant (domain set), the reader is the real **remote JWKS** verifier — **jose** in TS (`createRemoteJWKSet` over `https://{domain}/.well-known/jwks.json`, RS256, issuer = `https://{domain}/` *with* the trailing slash Auth0 appends), **PyJWT + a ~40-line hand-rolled JWKS reader** in PY (fetch → cache by `kid` → **re-fetch exactly once** on an unknown `kid` — the key-rotation live case) signing/verifying with a `cryptography` `RSAPublicNumbers` key. **No password, no token endpoint, no badge *issuing*** — the house *reads and checks* an Auth0 badge it never minted.
-- **The reader answers *who you are*; the *authorization* (can you do *that*) is Day 10-11.** `request.user` is typed as the badge **`JWTPayload`** on the Fastify request module and **`request.state.user`** in the PY middleware — the *one read* Day 10-11's ownership model descends from (`sub` for *who's asking*). v4's `identity/` root domain (Auth, Users, RBAC) begins *here*; today is **authentication only** — the *authorizer* (owner / member / invite — Plane's workspace-members) is the layer *above*, deferred to Day 10-11.
+### The door (both tracks)
+
+> 🍜 *The restaurant gets a back-of-house door: a reader at the entrance that checks every badge. The kitchen itself never sees a badge.*
+
+- TS: Fastify **`onRequest` hook** — `.addHook("onRequest", doorHook)` in `server.ts`.
+- PY: **`BaseHTTPMiddleware`** — `.add_middleware(...)` in `server.py`.
+- Door logic: read `Authorization: Bearer <token>` → call the pure `verifyBadge(token, tenant, audience)` → on failure, return the **ADR-007 envelope** with a **401**.
+- One global reader at the front — not a per-route lock. One pure verifier behind one thin door is the shape: same inputs, same failure semantics, only the crypto differs between kitchens.
+- **Scope:** the reader answers *who you are*. *Who may do what* (RBAC — owner / member / invite, after Plane's workspace-members) is the authorizer layer *above*, deferred to Day 10–11. v4's `identity/` root domain (Auth, Users, RBAC) begins here; today is **authentication only**.
+
+### The reader (real JWKS, replacing the Day 3 stub)
+
+> 🍜 *The old doorman waved everyone through. The new one actually reads the badge.*
+
+- **The Day 3 stub** (`auth.ts` / `auth.py` returning a literal `{ sub: "dev" }`) is **demoted, not deleted**: it survives only as the **doorless path** — `if (!process.env.AUTH0_DOMAIN) return` (ADR-008's shape, generalized to the door).
+- **Verification is remote JWKS** — the restaurant *reads and checks* a badge it never minted. No password endpoint, no token issuing.
+  - TS: **jose** — `createRemoteJWKSet("https://{domain}/.well-known/jwks.json")`, RS256, issuer `https://{domain}/` (with the trailing slash Auth0 appends).
+  - PY: **PyJWT** + a ~40-line hand-rolled JWKS reader: fetch → cache by `kid` → **one re-fetch** on an unknown `kid` (the key-rotation case), verifying with a `cryptography` `RSAPublicNumbers` key. (Named debt — Phase 2: harmonize or switch to a library JWKS provider.)
+- **Attachment point:** `request.user` typed as `JWTPayload` on the Fastify request module; `request.state.user` in the PY middleware. This is the *one read* Day 10–11's ownership model inherits (`sub` = who's asking).
+
+---
 
 ## Learned
 
-- **The parity wall had its *first real teeth* — not the envelope shape, the *failure strings.*** ADR-007 made the counter *look* alike (status codes + `{ statusCode, error, message }`); ADR-011 is the *second* gate, and it is *stringly*. The day's engineering was **mapping two different failure worlds to one contract**: **jose v6** throws typed **`JWTExpired / JWTInvalidAudience / JWTInvalidIssuer / JWTDisclosure`** (and a `Signature verification failed` catch-all) while **PyJWT** throws **`ExpiredSignatureError / InvalidAudienceError / InvalidIssuerError / InvalidTokenError`**. Each kitchen reaches the *same six* `message` strings from a **native `instanceof`** — **never `parse .message`** (stringly is the *exact* parity wall it fights). The contract is the *strings*, not the implementation: a kitchen may use a different library, but a *different* 401 *string* is a parity break.
-- **The lighthouse (health) parity crack.** The *street* — `{ "/", "/docs", "/redoc", "/openapi.json", "/health" }` — is what stays *public by design* (ADR-010's no-cellar lighthouse + the OpenAPI menu), and it must be **identical in both tracks**. The **crack**: the TS `PUBLIC_PATHS` was missing **`/health`** that the PY side already had — so the TS door was treating the *lighthouse* as a *data route* (it would 401 a health probe). **Fix committed in the day's one code delta**: add `/health` to the TS set (**+2 lighthouse tests**), so the set *mirrors* the PY side exactly. (*The TS lighthouse *stub list* also adds a `/redoc` stub *in the test* because Fastify ships no `/redoc` route where FastAPI does — a *commented* test-only divergence; the *set* stays 1:1.) The street is now a *tested* invariant on *both* kitchens — a route added "public" in one without checking the mirror will red on push.
-- **A *new* dependency is a *new* install wall on the *zero-service* gate.** `jose` (TS) and **`PyJWT` + `pyjwt[cryptography]`** (PY) are the two *crypto* deps the house didn't have. **This is ADR-010's pnpm build-script wall (Day 7) re-exercising the door** — a door that *drags a new install* onto the no-service gate must not break the install. The mitigation is the *same* as Day 7: pin `jose` **`^6.2.12`** in TS and **`pyjwt[cryptography] ^2.14` + `httpx ^0.28.1`** in PY, *and* the **JWKS read is *stubbed* in tests** (no live network) — so the door rides *inside* the gate without a live auth provider to bring down a zero-service runner.
-- **The *doorless path* is the ADR-008 "no env" pattern, *generalized* to the door.** **`if (!process.env.AUTH0_DOMAIN) return`** — *no tenant configured, no reader*. This is why the whole suite (and **ADR-010's zero-service CI gate**) stays **green with `AUTH0_DOMAIN` unset**: *no env is doorless*, which *is* the no-env the gate already runs under. One load-bearing asymmetry to name (ADR-011): `AUTH0_DOMAIN` *alone* still engags the reader against a **default audience** `"foundry-taskflow-api-aud"` (the `??` fallback) — so **"doorless" means *no `AUTH0_DOMAIN`*, specifically** — not "no `AUTH0_*`." The ADR-008 *no-env-is-doorless* story does *not* transfer 1:1 to the door; it is keyed to *one* var.
+### 1. The parity wall gained its first real teeth — the **failure strings**
+
+> 🍜 *Same receptionist script, two kitchens. Different words, and the guest notices.*
+
+- ADR-007 made the counters *look* alike (status codes + `{ statusCode, error, message }` shape). ADR-011 is the **second gate, and it is stringly**: the contract is the **same six 401 `message` strings** — `No token` · `Malformed` · `Expired` · `Wrong audience` · `Wrong issuer` · `Signature verification failed`.
+- The engineering: map two different error worlds to that one contract.
+  - TS: **jose v6** throws typed errors — `JWTExpired`, `JWTInvalidAudience`, `JWTInvalidIssuer`, `JWTDisclosure` (plus the `Signature verification failed` catch-all).
+  - PY: **PyJWT** throws `ExpiredSignatureError`, `InvalidAudienceError`, `InvalidIssuerError`, `InvalidTokenError`.
+- **Rule:** map via native `instanceof` — **never `parse .message`** (string-matching is the exact drift the wall exists to prevent). A kitchen may swap libraries; a different 401 *string* is a parity break and will red the suite.
+
+### 2. The lighthouse must be open in *both* tracks
+
+> 🍜 *CI and any load balancer ping the lighthouse, not the dining room. A dark lighthouse reads "closed."*
+
+- The public set — `{ "/", "/docs", "/redoc", "/openapi.json", "/health" }` — stays **public by design** (ADR-010's no-cellar lighthouse + the OpenAPI menu) and must be **identical in both tracks**.
+- Today's crack: TS `PUBLIC_PATHS` lacked `/health`; PY had it. (Fixed — see [Broke & Fixed](#broke--fixed).)
+- Known cosmetic divergence: FastAPI ships `/redoc`; Fastify doesn't. So the TS test *stubs* a `/redoc` route — **the set stays 1:1; only the stub differs** (commented in the test).
+- Now a **tested invariant**: add a route "public" in one track without mirroring the other → red on push.
+
+### 3. Every new dependency re-opens the install wall (ADR-010)
+
+> 🔩 *Day 7's pnpm build-script gotcha, at the door again.*
+
+- New deps: `jose` (TS); `PyJWT` + `httpx` (PY).
+- Mitigation (same shape as Day 7): **pin** `jose ^6.2.12` (TS), `pyjwt[cryptography] ^2.14` + `httpx ^0.28.1` (PY) — **and stub the JWKS read in tests** (no live network), so deps that *want* network ride inside the no-service gate without a live auth provider to bring the runner down.
+
+### 4. "Doorless" is keyed to *one* variable
+
+- Doorless = **`AUTH0_DOMAIN` absent, specifically** — *not* "no `AUTH0_*` vars".
+- The trap: `AUTH0_DOMAIN` set *alone* still engages the reader, because audience has a `??` fallback — default `"foundry-taskflow-api-aud"`. So *domain set, audience unset* = **reader on**.
+- That asymmetry is exactly why the suite stays green in CI: the gate runs with no env at all → the doorless path returns early. No live Auth0, no network, **no gate change**. (Noted in ADR-011: ADR-008's no-env-is-doorless story is keyed to this one var, not a blanket "no `AUTH0_*`".)
+
+---
 
 ## Broke & Fixed
 
-- **Error (the door's *real second* tooth, *not* the install): the *live* JWKS fetch would have 500'd a runner.** The PY reader *fetches* `https://{domain}/.well-known/jwks.json` on a *real* tenant — a **network call** that has **no business** being in the **ADR-010 zero-service** CI path (a dead runner has no `AUTH0_DOMAIN` *and* no network guarantee to Auth0). **The *crack***: the first reader draft let the JWKS fetch *throw a network error* that the door did **not** map to a 401 string — it *fell through* toward a 500, the *one* shape ADR-007's receptionist *forbids improvising on*. **Fix:** the failure-mapping is a small **`mapFailReason`** function with **`Signature verification failed` as an *explicit* `else`** — *every* unclassified path (network-down, unknown-kid-after-refetch, bad-sig, *and now* the JWKS fetch itself) resolves to the **same opaque string**, never a 500, never a *different* string, never a *silent pass*. Fail-closed with no discretion to drift.
-- **Error (the lighthouse crack — this day's *headline*): the **`/health` mirror** above.** The TS set *lacked* `/health`; the PY set *had* it. The *door* was a **`/health` 401** for the TS counter (health probe → data route → unauthorized) while the PY counter served it open. The **ADR-010 no-cellar lighthouse** (the thing CI *and* any load balancer pings) was therefore **red on one track**. **Fix (the one code delta):** `/health` added to the TS `PUBLIC_PATHS` + **2 lighthouse tests**, so `GET /health` is **200 with* no *token* on *both* counters — the *mirror* is asserted on *both*, and a future drift *red on push*.
-- **Error (PY *first* attempt: the JWKS `RSAPublicNumbers` from raw base64.)** The hand-rolled reader built the RSA key from the JWK **`n`/`e`** as *raw* base64url and the *first* `pyjwt.encode`/`decode` round-trip on a locally-minted key **failed to verify** — a *silent* "signature" mismatch that *looked* like a real Auth0 problem but was a **base64 *url vs standard* padding** slip (the JWK fields are *unpadded* base64url; PyJWT's `RSAPublicNumbers` wants a DER-ized key). **Fix:** decode base64url (**pad to length % 4**) → big-endian `int` → `RSAPublicNumbers(e, n, d=None, …)` → `public_key()` — the *exact* ~40-liner that's *cached* + *re-fetched-once* in the final reader. Verified against a **locally-generated** keypair in the test (no remote Auth0).
+| # | Bug | Picture | Why it broke | Fix |
+|---|-----|---------|-------------|-----|
+| 1 | **Lighthouse crack** (the headline): TS `PUBLIC_PATHS` missing `/health` | *The PY lighthouse was lit; the TS one was a dark window.* | The door classified `/health` as a *data route* → TS counters 401'd health probes while PY served them open. ADR-010's no-cellar lighthouse (what CI **and** any load balancer pings) was red on one track. | Add `/health` to TS `PUBLIC_PATHS` + 2 lighthouse tests. `GET /health` → **200 with no token on both counters**; the mirror is asserted on both sides, so future drift reds on push. |
+| 2 | A live JWKS fetch would 500 a zero-service runner | *A door with a network call that isn't on the script.* | The first PY draft let the JWKS fetch **throw a network error** the door didn't map to a 401 string — it fell through toward a **500**: the one shape ADR-007's receptionist forbids improvising on. | `mapFailReason` gains **`Signature verification failed` as an explicit `else`**: every unclassified input (network-down, unknown-`kid` after re-fetch, bad signature, *the JWKS fetch itself*) resolves to that **one opaque string**. Never 500, never a different string, never a silent pass. Fail-closed, no discretion to drift. |
+| 3 | PY JWKS: key built from raw base64url — round-trip failed | *The badge looks right, but the engraving is off by a few pixels — the reader can't tell you apart.* | JWK `n`/`e` are **unpadded base64url**; `RSAPublicNumbers` wants DER. The first `pyjwt` round-trip on a **locally-minted** key failed with a "signature" mismatch that *looked* like a real Auth0 problem. | Decode base64url → **pad to %4** → big-endian `int` → `RSAPublicNumbers(e, n, …)` → `public_key()`. This ~40-liner (fetch → cache-by-`kid` → re-fetch-once) is the final reader. Verified in tests against a locally-generated keypair — no remote Auth0. |
+
+**Lesson that outlives the day:** the parity contract lives in *observable strings and open/closed sets* — the envelope, the six messages, `PUBLIC_PATHS`. The implementation *may* differ (jose ≠ PyJWT); the *strings* may not.
+
+---
+
+## Request / Response Flow
+
+> 🔩 **Format note.** Rendered below in **Mermaid** — the de-facto inline-diagram format for `.md` files: native on GitHub, VS Code, Obsidian, and any static site with a Mermaid plugin, so the diagram travels with the *note itself* without a hosted image.
+
+### Every guest passes the reader - the six strings are the whole story
+
+> 🍜 *A reader now stands at both entrances. It never argues with a badge - it recites one of six lines and turns the guest around.*
+
+```mermaid
+sequenceDiagram
+    participant S as "the street"
+    participant T as "TS counter 8000"
+    participant P as "PY counter 8001"
+    participant A as "the live Auth0 JWKS"
+    S->>T: "GET /workspaces, Bearer jwt, with tenant header"
+    T->>T: "the door hands the badge to its reader"
+    T->>T: "reader checks the key, OK, sub rides on the request"
+    T-->>S: "200, the menu behind the door"
+    S->>P: "GET /workspaces, a badge the reader cannot read"
+    P-->>S: "401, one of the six shared strings"
+    S->>P: "GET /health, no badge at all"
+    P-->>S: "200, the lighthouse stays open"
+    S--xA: "never touched - the JWKS read is stubbed in tests"
+```
+
+*The live JWKS is the one participant that takes no part - the same shape as the cellar did under ADR-010. The door engages only when `AUTH0_DOMAIN` is set; CI never sets it, so the street sees the reader's six strings against **stubbed** keys, deterministically.*
+
+**Alternatives box** (kept here, per the house template, for day-8+ readers):
+
+| Format | Where it renders | Why you might swap |
+|---|---|---|
+| Mermaid (default) | GitHub, VS Code, Obsidian, any site with a plugin | the standing choice |
+| PlantUML | any site with a plugin / hosted | richer UML shapes |
+| Excalidraw (JSON embed) | dedicated pages | hand-drawn tone |
+| Hosted image (PNG) | anywhere | zero renderer dependency, but the diagram no longer travels with the note |
+
+---
 
 ## Commands Run
 
+Receipts, verbatim.
+
 | Command | Outcome |
 |---|---|
-| `git --no-pager diff -- apps/taskflow/ts/src/auth.ts apps/taskflow/ts/tests/auth.test.ts` | **4 insertions / 2 deletions** — the `/health` parity crack: `PUBLIC_PATHS` gains `"/health"` + the lighthouse test stub list mirrors it (the *only* uncommitted *code* on the day) |
-| `pnpm -C apps/taskflow/ts exec tsc --noEmit` | **clean, exit 0** (the door hook + `request.user: JWTPayload` module augmentation type) |
-| `pnpm -C apps/taskflow/ts run test` | **30/30** (adds **10 reader tests** over Day 7's 20: the *six-string* contract, *doorless* no-tenant, *fail-closed* stranger-tenant, the lighthouse-stays-open pair) |
-| `uv -C apps/taskflow/py run pytest -q` | **18/18** (adds the PY reader suite: doorless, the *six strings* on a *locally-signed* token, fail-closed, JWKS cache + *one* re-fetch, no-token, non-Bearer) |
-| `curl -s localhost:8001/health` and the *no-token* `8000/…` | the lighthouse + street **stay open** through the front door (`AUTH0_DOMAIN` unset = doorless) — ADR-010's gate **invariant** |
+| `git --no-pager diff -- apps/taskflow/ts/src/auth.ts apps/taskflow/ts/tests/auth.test.ts` | 4 ins / 2 dels — the `/health` fix + mirrored lighthouse stub list (the day's only uncommitted code) |
+| `pnpm -C apps/taskflow/ts exec tsc --noEmit` | clean, exit 0 (door hook + `request.user: JWTPayload` module augmentation type) |
+| `pnpm -C apps/taskflow/ts run test` | 30/30 — adds 10 reader tests over Day 7's 20: the six-string contract, doorless no-tenant, fail-closed stranger-tenant, the lighthouse stays-open pair |
+| `uv -C apps/taskflow/py run pytest -q` | 18/18 — PY reader suite: doorless, six strings on a locally-signed token, fail-closed, JWKS cache + one re-fetch, no-token, non-Bearer |
+| `curl -s localhost:8001/health` + no-token `curl localhost:8000/…` | lighthouse + street stay open with `AUTH0_DOMAIN` unset (doorless) — ADR-010's gate invariant |
 
-## Outcome (closed locally; the one *unknown* is *CI, below*)
+---
 
-- **Both tracks green *and* *mirrored*.** The **TS track** is `tsc --noEmit` clean + **30/30**; the **PY track** is **18/18**. The *parity* is *asserted on the strings, both sides* — a 401 with a *different* `message` by kitchen would be red, and a **lighthouse** that 401'd on *one* counter would be red. The **lighthouse crack** (the TS `/health`) is **fixed in code** and **asserted in tests.**
-- **The zero-service gate is *invariant*.** ADR-010's "no `services:`" is *unchanged*: the door reads **`AUTH0_DOMAIN` from env** and the *JWKS* is **stubbed in tests** — *no live auth provider, no Postgres, no network* on the runner. The *no-env is doorless* path *is* the no-env the gate already runs under, so the suite stays green *as doorless*. **The day's one *unknown*:** *does the *live*-JWKS path (a real `AUTH0_DOMAIN` set, real `https` to Auth0) *hold up in a real runner?** — that is **ADR-010's "the gate tests the counter, never the cellar" applied to the *door***: a *live* provider is **not** in a *zero-service* gate, so the day *declares it a deferred debt rather than flaking the gate.* It is **Phase 2's** "make it right" (a *live* smoke, or a *library* JWKS provider + harmonization — the ADR-011 *named* debt).
-- **`dev` is *dirty by exactly the day* — the one code delta + one ADR file.** Uncommitted on `dev` (the *one* thing not in `a96d352`): the **6-line `/health` parity fix** (`ts/src/auth.ts` + `ts/tests/auth.test.ts`) **and** **`docs/adrs/adr-011-auth0-badge-reader.md`** (new). The *rest* of the authenticator (the reader + the door + the *six-string* verifier + the **18/30** test suites) is **already committed** in `5a025ba` (*feat(auth)*), on `dev` = `origin/dev`. So the closeout commit below is **the parity fix + the ADR** — *not* the whole authenticator. **One *closeout commit*, both files, *then* the parity report** (Sprint 2's first *real* parity assertion: the *contract strings* + the *street*).
+## Outcome
 
-## ADRs Created (rule 11)
-- **ADR-011: Auth0 — the Badge Reader at the Counter** (`docs/adrs/adr-011-auth0-badge-reader.md`) — *"the reader is a *pure function* + a *thin door*, **one per kitchen**; the *six-string* 401 contract (**No token / Malformed / Expired / Wrong audience / Wrong issuer / Signature**) is the **parity wall's second gate** (after ADR-007's envelope); the *lighthouse + menu* stay *public by design* on a *mirrored* `PUBLIC_PATHS` set; **doorless** is **`if (!AUTH0_DOMAIN) return`** (ADR-008 *generalized* — but keyed to *one* var: set *with* the default audience, it's *still* on); **fail-closed** with `Signature verification failed` as the **explicit `else`**; the *hand-rolled PY JWKS reader* (fetch → cache → *one* re-fetch) is the **named debt** → Phase 2 / Sprint 5 *harmonize-or-library*; `request.user = JWTPayload` is the **one read** Day 10-11's RBAC descends from (*authentication* today, *authorization* is the layer above).* See `docs/adrs/adr-011-auth0-badge-reader.md` — written *after* the local green, *before* the *live*-JWKS *unknown* could be re-scoped (the debt is *named* in it, not *solved*).
+Local: closed green. Carried forward: one named unknown, declared below.
 
-## Preview of Next Step (Sprint 2, Day 9 — the *same* door, *live*)
+- **Both tracks green and mirrored.** TS: `tsc --noEmit` clean + 30/30. PY: 18/18. The parity is **asserted on the strings, both sides** — a 401 with a different `message`, or a lighthouse dark on one counter, fails the suite. The `/health` lighthouse crack is fixed in code and asserted in tests.
+- **The zero-service gate is invariant.** ADR-010's "no `services:`" is unchanged: the door reads `AUTH0_DOMAIN` from env, the JWKS read is stubbed in tests — no live provider, no Postgres, no network on the runner. No-env is the doorless path, which *is* the no-env the gate already runs under.
+- **The one unknown (declared as deferred debt, not flaked):** does the **live** JWKS round-trip — real `AUTH0_DOMAIN`, real `https` to Auth0 — hold in a real runner? That is ADR-010's "the gate tests the counter, never the cellar" applied to the door. Phase 2 will "make it right" (a live smoke, or a library JWKS provider + harmonization).
+- **Branch state.** Uncommitted on `dev`: the 6-line `/health` fix (`ts/src/auth.ts` + `ts/tests/auth.test.ts`) **and** the new `docs/adrs/adr-011-auth0-badge-reader.md` — nothing else. The rest of the authenticator (reader + door + six-string verifier + the 30/18 suites) is already in `5a025ba feat(auth)` on `origin/dev` (the uncommitted work is relative to `a96d352`). One closeout commit with both files, then the **parity report** — Sprint 2's first *real* parity assertion: the contract strings + the street.
 
-Day 8 bolted the *reader*; *Day 9 turns it on* — a **real `AUTH0_DOMAIN`** in the compose / AWS env so the door *engages on a live runner* (the *no-env-is-doorless* path gives way to the *real* JWKS round-trip), and the **`X-Tenant-Domain` → `ALLOWED_DOMAINS`** allowlist *seam* (ADR-011's *multi-tenancy* hook) is *exercised* rather than merely *wired*. The *six-string* contract **stays** *asserted on *both* kitchens — Day 9 *does not* change the reader, it *drives it from a real tenant*. **Then**, with the door *on*, **Day 10-11** climbs *one layer up*: **`request.user.sub` → *who owns* / *who may view*** (Plane's workspace-members; **Owner can invite, member can view**) — the *authorizer* above the *reader* this ADR built.
+---
+
+## ADRs Created
+
+- **[ADR-011: Auth0 — the Badge Reader at the Counter](../adrs/adr-011-auth0-badge-reader.md).** Decision in one line: *the reader is a pure function behind a thin door, one per kitchen; the six-string 401 contract is the parity wall's second gate (after ADR-007's envelope); `PUBLIC_PATHS` (lighthouse + menu) stays public and mirrored; doorless = `AUTH0_DOMAIN` absent (keyed to that one var); fail-closed with an explicit `else`; the hand-rolled PY JWKS reader is a named debt → Phase 2 / Sprint 5; `request.user` is the one read Day 10–11's RBAC descends from.* (Written after the local green and before the live-JWKS unknown — the debt is *named* in it, not *solved*.)
+
+---
+
+## Preview: Day 9 — the same door, live (Sprint 2)
+
+> 🍜 *Day 8 bolted the door. Day 9 turns it on.*
+
+- **What changes:** a **real `AUTH0_DOMAIN`** in the compose / AWS env → the door engages against the real JWKS round-trip (the no-env-is-doorless path gives way). The `X-Tenant-Domain` → `ALLOWED_DOMAINS` allowlist seam (ADR-011's multi-tenancy hook) is *exercised* rather than merely wired.
+- **What doesn't change:** the reader itself, and the six-string contract asserted on both kitchens — Day 9 *drives* the door from a real tenant; it does not rewrite it.
+- **Then Day 10–11 climbs one layer up:** `request.user.sub` → *who owns / who may view* (Plane's workspace-members — **owner can invite, member can view**) — the authorizer sitting above today's reader.
+
+---
+
+## Notes
+
+- Prompt file used: `docs/prompts/day-08-auth0-2026-09-16-2106.md` (authored Sep 16 at the Day-7 closeout, per master.md's day-close step; the work ran **Sep 21**, note timestamp `1710` — the filename keeps the day it ran, house style, like Day 7 keeping its start).
+- Roadmap reference: `docs/roadmaps/v4/master.md` (Sprint 2, Day 8).
+- The closeout commit is the user's — rules 13/16: I stage, show the diff, propose the message, the user commits. This day leaves two files uncommitted on `dev`: the 6-line `/health` lighthouse fix and the new `docs/adrs/adr-011-auth0-badge-reader.md` — nothing else rides along; the rest of the door and reader is already in `5a025ba feat(auth)` on `origin/dev`.

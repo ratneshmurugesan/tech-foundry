@@ -55,6 +55,17 @@ Note prose reads **story first, terms in place** — a non-technical reader gets
 
 **Don't story-ify the receipts**: Commands Run, file paths, version pins, dates, error messages (quoted verbatim in Broke & Fixed), table rows — those stay exact. The picture goes *around* them, never inside them.
 
+**Diagrams are receipts too, and they must render.** Inline diagrams in day notes render in **Mermaid** (` ```mermaid ` blocks) — native on GitHub, VS Code, Obsidian, and any static site with a Mermaid plugin, so the diagram travels with the *note itself*. No hosted images, no external viewers. The day's diagram lives in a **Request / Response Flow** section (see Template below), opened with the standard `Format note` callout, followed by one or more `###`-headed blocks, each with a picture-first subtitle ("The happy path — ...", "The six-string contract — ...") and the diagram underneath. Rules, kept verbatim because the parser is exact:
+
+- **Sequence diagrams (`sequenceDiagram`) — keep every label plain.** No `<>`, `{}`, `;`, parens, em-dashes, or arrows *inside* participant aliases or message text. If the truth wears punctuation (a header value like `<jwt>`, a return like `{ sub } → request.user`), reword it into words: `Bearer jwt`, `OK sub status maps to request.user`.
+- **Flowcharts — quote anything fiddly.** Every node/edge label containing `()`, `<br/>`, commas, guillemets, or a leading `:` goes in double quotes: `A["cellar (Postgres) 15"]`, `D -->|"no env"| X`.
+- **The word `end` in all lowercase breaks a diagram** (flowchart keyword collision) — capitalize it (`End`) or avoid it.
+- **Parse-check before writing it into a note** — don't eyeball. Throwaway dir, two commands (~15s):
+    ```bash
+    mkdir -p /tmp/mermaid-check && cd /tmp/mermaid-check && npm init -y && npm i mermaid jsdom
+    ```
+    …plus a six-line script that extracts each `mermaid` block from the note and calls `mermaid.parse(code)` under a JSDOM `window`/`document`/`navigator`. Every block must return OK (see Day 8's *Broke & Fixed* for the first time a block failed, and why).
+
 **Worked example** (from Day 4, Taskflow — `create_all` vs `db:push`):
 
 > **Before:** `PY Base.metadata.create_all() creates tables but does not ALTER existing FK constraints — FK/cascade changes require docker compose down -v && up -d + db:push.`
@@ -62,14 +73,27 @@ Note prose reads **story first, terms in place** — a non-technical reader gets
 
 Same facts, same commands, same terms — but now there's a picture to hang the idea on.
 
+**Page envelope — the same shape on every day.** Each note opens and reads in a fixed rhythm so Day 10 and Day 3 read as one book:
+
+- **TL;DR first.** Directly under the `# Day XX` title, after a `---`, a `**TL;DR**` block: 3–6 short bullets that let a skimmer *get the day* without reading it. Lead with what was built, then status (test counts / green-red), then the one headline gotcha or named debt. Bullets are still story-first + terms-in-place — but compressed to a glance.
+- **`---` between every major `##` section.** The horizontal rule is the beat between chapters; it is the visual separator the TL;DR relies on.
+- **Section order is fixed; presence is conditional.** Keep the order in the Template below. Omit a section only when the day genuinely has none (e.g. no request/response surface → the Flow section says "No diagram today." rather than vanishing; a blocked day keeps **Blocked / Deferred**, a clean day may fold it into **Outcome**). Never reorder.
+
 ---
 
 ## Template
 
 Copy the block below as `day-XX-[topic].md`:
 
-```markdown
+````markdown
 # Day XX — [Topic Title]
+
+---
+
+**TL;DR**
+- [3–6 skimmable bullets: what was built → status (test counts / green-red) → the one headline gotcha or named debt. Story-first + terms-in-place, but compressed to a glance.]
+
+---
 
 ## Built
 
@@ -79,9 +103,11 @@ What was actually built today? List each file or component with checkboxes. For 
 
 What concepts, patterns, or OSS references did you encounter? Write these story-first (see Writing Standard above) — picture first, exact terms right after.
 
+---
+
 ## Broke & Fixed
 
-What went wrong and how was it resolved?
+What went wrong and how was it resolved? Render as a table — one row per bug — with a **Picture** column (the everyday one-liner) and a **Lesson that outlives the day** line beneath it.
 - Error encountered (include the error message verbatim if helpful)
 - Root cause analysis (story-first: what broke, *as a picture*, then the exact mechanism)
 - Fix applied (the exact commands — kept verbatim)
@@ -89,12 +115,33 @@ What went wrong and how was it resolved?
 
 If nothing broke, write "No issues encountered."
 
+---
+
 ## Blocked / Deferred
 
-What couldn't be completed today and why?
+What couldn't be completed today and why? (Fold into Outcome in a clean day, but never omit the beat.)
 - What's blocked (external dependency, missing knowledge, tooling issue)?
 - What's deferred (intentionally saved for a later phase)?
 - What's carried forward to the next day?
+
+---
+
+## Request / Response Flow
+
+> 🔩 **Format note.** Rendered below in **Mermaid** — the de-facto inline-diagram format for `.md` files: native on GitHub, VS Code, Obsidian, and any Jekyll/Hugo/Astro static site with a `mermaid` plugin, so the diagram follows the *note itself* without a hosted image. (Alternatives in the box at the bottom, should you ever want to swap.)
+
+One or more `###`-headed diagrams, each subtitle story-first ("The happy path — reader engages the kitchen"). Follow the Mermaid rules in the Writing Standard above — and parse-check every block (see Day 8). If the day's work has no request/response surface worth drawing, write "No diagram today."
+
+**Alternatives box** (keep at the very bottom of the section, for day 8+ readers):
+
+| Format | Where it renders | Why you might swap |
+|---|---|---|
+| Mermaid (default) | GitHub, VS Code, Obsidian, any site with a plugin | the standing choice |
+| PlantUML | any site with a plugin / hosted | richer UML shapes |
+| Excalidraw (JSON embed) | dedicated pages | hand-drawn tone |
+| Hosted image (PNG) | anywhere | zero renderer dependency, but the diagram no longer travels with the note |
+
+---
 
 ## Commands Run
 
@@ -112,42 +159,57 @@ Key commands executed today, with outcomes. Include for reproducibility.
 > Collapse repetitive retries into grouped entries. Keep the story, drop the noise.
 > Look for commands executed within /media/ratnesh-murugesan/PRO/Professional/ratnesh-vault/repos/foundry/ is possible
 
+---
 
+## Outcome
 
-## Preview of Next day
+The day's net state, story-first — what is now true and *invariant* (and therefore safe to build on), and what is **named and declared as deferred debt** rather than left flaky. Bullets, not prose. (A clean day may fold Blocked / Deferred here; a blocked day keeps it a distinct section above.)
+
+---
+
+## ADRs Created
+
+List any ADRs created or updated today, as a table (ADR | Decision | Status) with a link to each.
+- ADR-XXX: [title](../adrs/adr-XXX-….md) — [decision in one line]
+- If no ADRs were needed, write "No architectural decisions today."
+
+---
+
+## Preview: Day XX+1 — [Topic]
 
 Story-first overview of what tomorrow covers — the everyday picture of the day, then the technical topics in place (see Writing Standard above):
 - **What's being built**: Name the day's topic and the main deliverable
 - **Concepts**: New patterns, frameworks, or DDD concepts you'll encounter
+- **Headline gotcha**: the day's risk, named before it hits
 - **Files**: New files you'll create or existing files you'll modify
 - **Prerequisites**: Dependencies to install, services to start, or setup steps before beginning
 - **Connection**: How today's work feeds into tomorrow (e.g., "today's repository becomes tomorrow's data layer")
 
-
-## ADRs Created
-
-List any ADRs created or updated today.
-- ADR-XXX: [title] — [brief reason]
-- If no ADRs were needed, write "No architectural decisions today."
+---
 
 ## Notes
 
-Free-form notes, observations, or anything that doesn't fit above (story-first prose, see Writing Standard above).
+Free-form notes, observations, or anything that doesn't fit above (story-first prose, see Writing Standard above). Include the fixed footer receipts:
 - Prompt file used: `tech-foundry/docs/prompts/day-XX-[slug]-[date].md` (name of TODAY's prompt, or `master.md` if the day ran from the rules file directly)
 - Roadmap reference: `tech-foundry/docs/roadmaps/v4/master.md`
 - Any deviations from the planned day
 - Ideas for future days
-```
+````
 
 ---
 
 ## Existing Notes
 
-| File | Day | Topic |
-|---|---|---|
-| `day-01-types-and-async-2026-08-14-1750.md` | 1 | Types & Async |
-| `day-02-api-skeleton-2026-08-17-1750.md` | 2 | API Skeleton |
-| `day-03-postgres-orm-2026-08-19-1750.md` | 3 | Postgres + ORM |
-| `day-04-crud-error-contract-cascade-2026-08-26-1800.md` | 4 | CRUD, Error Contract, Cascade |
-| `day-05-docker-compose-2026-09-03-1300.md` | 5 | Docker Compose (Postgres + App) |
+Format column: **new** = already carries the TL;DR envelope + `---` beats + Request/Response Flow (this template). **legacy** = predates the envelope; content is current, structure is the older shape.
+
+| File | Day | Topic | Format |
+|---|---|---|---|
+| `day-01-types-and-async-2026-08-14-1750.md` | 1 | Types & Async | new |
+| `day-02-api-skeleton-2026-08-17-1750.md` | 2 | API Skeleton | new |
+| `day-03-postgres-orm-2026-08-19-1750.md` | 3 | Postgres + ORM | new |
+| `day-04-crud-error-contract-cascade-2026-08-26-1800.md` | 4 | CRUD, Error Contract, Cascade | new |
+| `day-05-docker-compose-2026-09-03-1300.md` | 5 | Docker Compose (Postgres + App) | new |
+| `day-06-aws-deploy-2026-09-11-1718.md` | 6 | AWS Deploy | new |
+| `day-07-ci-2026-09-15-1151.md` | 7 | CI | new |
+| `day-08-auth0-badge-reader-2026-09-21-1710.md` | 8 | Auth0 Badge Reader | new |
 

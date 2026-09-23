@@ -2,6 +2,17 @@
 
 > Executed across Aug 19–26 (TS first, PY later). Day 3 preview committed to "12 endpoints per track, 24 total, watch out for cascade + validation". Delivered: 12 routes/track, one shared error contract, DB-level cascade, plus a deliberate deviation from the roadmap's "thin" bar (see ADR-007).
 
+---
+
+**TL;DR**
+- **Both kitchens take, change, and cancel orders.** Full CRUD — 12 routes/track (POST / GET:id / PATCH / DELETE × 3 entities) — and the counter speaks **one language**: a shared 400/404/409/500 error contract.
+- **Two invariants outlived the day:** *cascade lives in the DB* (one `{ onDelete: 'cascade' }`, zero service lines) + *the error ticket is one shape* (one client script hits `:8000` or `:8001` unchanged).
+- **Status:** the 4-step verification passes on both ports; the full test suite surfaced **five real code bugs (all fixed)** and a cross-track asymmetry; two of my first flags retracted as false positives. Cascade verified live.
+- **Decision locked:** semantic error contract + DB cascade + the *deliberate* build-up beyond the roadmap's "thin" shell — ADR-007.
+- **Headline gotcha:** `uvicorn.run()` in PY is a **block, not a Promise** — don't `await` it. And the mirror is *how a request resolves*, not how it's spelled.
+
+---
+
 ## Built
 
 The counter window grows a second pair of hands: every station can now take, change, and cancel orders — and when something blows up in the kitchen, the front door tells you so politely. Both tracks ship the same ticket shape: 12 routes each, one shared error contract.
@@ -19,6 +30,8 @@ The counter window grows a second pair of hands: every station can now take, cha
 
 **Python track** (FastAPI + SQLAlchemy async) — mirrored the whole TS contract in `py/src/{types,errors,error_handlers,repository,server,models}.py`. `models.py` FKs gained `ondelete='cascade'`; `main.py` switched to `uvicorn.run("src.main:app", reload=True)`.
 
+---
+
 ## Learned
 
 - **Fastify 5 + Zod v4 need a version lockstep**: two dancers who only turn together — pair the wrong partner and the whole figure falls apart mid-routine. `@fastify/schema@v3` works with Fastify 5. `zod@^4.4.3` is the pairing.
@@ -29,6 +42,8 @@ The counter window grows a second pair of hands: every station can now take, cha
 - **Shell verification hygiene**: a witness who leaves the scene can't testify later. In ad-hoc validation scripts, never truncate the *same* variable that a later `jq` extraction reads — truncation once clobbered the `.id` extraction, making a cascade check "pass" vacuously (the witness row never existed). Keep the full body (for `jq`) and the display copy as separate variables.
 - **`ON DELETE CASCADE` requires the constraint to exist in the live DB.** Python's startup is a first-time renovator: in year one it built the restaurant happily, but it will not remodel — so the moment we changed the walls (the cascade FKs), the only way in was to raze the place (`down -v`) and open a new one. (Drizzle, the TS side, does remodel — `db:push` was all it needed.) PY's `Base.metadata.create_all()` *creates* tables but does not *alter* existing `FOREIGN KEY` constraints — Day 3's tables keep the old non-cascade FK until the DB is rebuilt. This is a concrete ADR-005 negative, now with real teeth.
 - **`z.infer` vs interface duplication**: the same recipe hand-written on two whiteboards — every change must be copied over by hand, and eventually the two boards drift. TS now keeps Zod schemas (`server.ts`) *and* TS interfaces (`types.ts`) for every Create/Update/Read type. Two sources of truth. Phase 2: `export type CreateWorkspace = z.infer<typeof createWorkspaceSchema>`.
+
+---
 
 ## Broke & Fixed
 
@@ -48,12 +63,62 @@ The counter window grows a second pair of hands: every station can now take, cha
 
 Net of the test suite pass: **five real code bugs were fixed** (three I missed the first time — the `Exception` raise, the missing `create_projects` parent check, the missing `patch_projects` destination check — plus two retracted false positives). The global 500 handler did its job by staying silent and safe — the airbag took the hit, which is exactly why the dents behind it were the hard ones to see. The final verification pass then surfaced **one more real gap on the *other* track** — the asymmetry audit was exactly worth it — and the only open item left, the **DB rebuild**, is now closed and verified (below).
 
+---
+
 ## Blocked / Deferred
 
 - ~~**DB rebuild** to activate PY cascade + apply FKs (`docker compose down -v` → `up -d`)~~ — **DONE** (2026-08-26): rebuilt, both servers restarted, cascade verified live on both ports.
 - The code-bug list above is **fully closed** as of the final verification pass; **nothing is open going into Day 5.**
 - **Docker Compose for the app** is Day 5 — DB already has one (ADR-006). The live DB now genuinely cascades, so what we box is what we tested.
 - `uvicorn --reload` watching `src` can crash on the mid-edit save of a big rewrite; use restarts for big changes. (The TS `tsx` track has *no* reload — after any `ts/src/*` edit, Ctrl-C + re-run `pnpm dev` or the running process is stale; the final verification pass caught a stale TS process once, which is exactly what 500-vs-404 drift looks like.)
+
+---
+
+## Request / Response Flow
+
+> 🔩 **Format note.** Mermaid below — native on GitHub / VS Code / Obsidian, so the diagram follows the note.
+
+Now a request has a real lifecycle — validation, a DB write, and (the day's headline) **how failure reaches the client**. One `alt` covers the paths that matter: the happy create, a bad payload, and a missing parent.
+
+```mermaid
+sequenceDiagram
+    participant C as "curl client"
+    participant R as "route"
+    participant X as "repo"
+    participant DB as "Postgres"
+    C->>R: "POST /issues"
+    R->>R: "validate body + parent lookup"
+    alt valid + parent exists
+        R->>X: "create issue"
+        X->>DB: "INSERT with UUID"
+        DB-->>R: "201 Created"
+        R-->>C: "201 created"
+    else bad payload
+        R-->>C: "400 Bad Request"
+    else parent missing
+        R-->>C: "404 Not Found"
+    end
+```
+
+The parity is the **response envelope**, not the route internals — one ticket shape for every failure, identical on `:8000` and `:8001`. That is the whole "one error contract" bet, now testable with the *same* `curl`:
+
+| Failure | HTTP | Same JSON on both ports? |
+|---|---|---|
+| missing / short field (zod) | 400 | ✅ `400` **+ field detail** |
+| GET a non-existent `:id` | 404 | ✅ `{error, message}` |
+| bad parent `id` (pre-fix) | 500 → now 404 | ✅ after the parent-lookup fix — *this was the asymmetry the bug-table caught* |
+| any other internal bug | 500 | ✅ sanitized `500 {error: "Internal Server Error", message: "Something went wrong"}` — the traceback stays in the server log; the client never sees it |
+
+And the *cascade* rides the request invisibly: `DELETE /workspaces/:id` → the DB drops the projects + issues by a schema invariant; the client just gets a `204`.
+
+| Format | Where it renders | Why you might swap |
+|---|---|---|
+| Mermaid (default) | GitHub, VS Code, Obsidian, any site with a plugin | the standing choice |
+| PlantUML | any site with a plugin / hosted | richer UML shapes |
+| Excalidraw (JSON embed) | dedicated pages | hand-drawn tone |
+| Hosted image (PNG) | anywhere | zero renderer dependency, but the diagram no longer travels with the note |
+
+---
 
 ## Commands Run
 
@@ -113,9 +178,26 @@ Pre-verification sessions, reconstructed to keep the lessons out of scrollback:
 - **`drizzle/` journal gitignored** today — the snapshots are photocopies, not the drawing: push snapshots regenerate from `src/db.ts`.
 - **Volume truth (correction in ADR-006)**: the landlord swore the place was cleaned out, but the tenants' boxes were still in the cellar. Plain `docker compose down` kept data (postgres image's anonymous volume); only `down -v` wiped it. The ADR-006 "data is lost on down" line was wrong in both directions.
 
+---
+
+## Outcome
+
+End of day four: the two parity bets are live and verified.
+
+- **The contract is one tongue.** 400/404/409/500 identical on `:8000` and `:8001` — one client script talks to both ports. The dual-language track earned a *real* parity win, not just mirrored code.
+- **Cascade is a DB invariant, not service code.** Delete a workspace and its projects + issues vanish by the schema rule — no kitchen hand remembers or enforces it. Verified live on both ports — child rows gone after the workspace delete.
+- **Fixed & closed:** five real code bugs (the silent global 500 "airbag" hid three of them — the dents *behind* it were the hard part); a cross-track asymmetry (TS `create_project`/`create_issue` missing the parent check PY already had) → **fully symmetric**; the DB rebuild closed PY's cascade gap.
+- **Deferred (named, Phase 2):** duplicate rules (the 409 code-path is wired but unused); `z.infer` to kill the `types.ts` / schema duplication; `@app.on_event` → lifespan. **Nothing open going into Day 5.**
+
+---
+
 ## ADRs Created
 
-- **ADR-007** — `docs/adrs/adr-007-crud-error-contract-cascade.md` (CRUD layer: semantic error contract + DB cascade + roadmap "thin" deviation)
+| ADR | Decision | Status |
+|-----|----------|--------|
+| [ADR-007 · **CRUD Layer — Semantic Error Contract + Database Cascade**](../adrs/adr-007-crud-error-contract-cascade.md) | One shared 400/404/409/500 **JSON shape** on both ports; **cascade as a DB invariant** (`onDelete:'cascade'`), not service code; a *deliberate* build-up beyond the roadmap's "thin" shell. | Active (permanent) |
+
+---
 
 ## Preview: Day 5 — Docker Compose
 
@@ -132,3 +214,11 @@ Roadmap: "Docker Compose — single service + Postgres; `docker compose up` star
 **Day 5 is "it runs in a box". Day 4 was "it has correct behavior + a contract." Order matters: fix Day 4's red flags, then box Day 5.**
 
 **Day 4 is done.** Contract, cascade, and both tracks' quirks are all closed out. Nothing open going into Day 5.
+
+---
+
+## Notes
+
+- Prompt file used: `master.md` (day 04 ran from the rules file; no per-day prompt file exists).
+- This day was **executed across Aug 19–26** — TS track first, PY mirrored later — so the notes span several terminal sessions (the `Session operations record` above is the reconstruction).
+- Roadmap reference: `tech-foundry/docs/roadmaps/v4/master.md`.

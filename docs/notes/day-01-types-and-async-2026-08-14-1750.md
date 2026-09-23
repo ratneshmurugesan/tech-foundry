@@ -1,5 +1,15 @@
 # Day 01 — Types and Async
 
+---
+
+**TL;DR**
+- **The heart beats twice:** two runnable skeletons, one per kitchen — 12 files: entities, `generateId`, a heartless in-memory repository, and a `main()` that runs create → save → query.
+- **Status:** both tracks run and print the story (`pnpm dev` / `uv run`). No test suite existed yet on Day 1 — parity is *signatures*, checked by the reader, not a suite.
+- **The dual-language ingredient list is canonical from here in:** `interface`↔Pydantic, `Date`↔`datetime`, `randomUUID()`↔`uuid4()`, `undefined`↔`None` — same dishes, different labels.
+- **Headline gotcha:** Python environment hell — 6 dead ends in 28 minutes until `sudo apt install python3-venv python3-full`; plus pnpm's `approve-builds` gotcha for native builds.
+
+---
+
 ## Built
 
 Two skeletons, both with a heartbeat — 12 files, one per track, side by side: entities, IDs, a heartless in-memory repository, and an entry point that already runs create → save → query. The in-memory repository stands in for a database; we'll raze it on Day 3, same beats, new home.
@@ -30,6 +40,8 @@ Two parallel kitchens, two sets of ingredients — the same recipe in different 
   - TS `undefined` → Python `None`
 - **Repository pattern**: The mailroom — your team talks to one counter, and nobody outside cares about the filing system behind it. Abstracting persistence behind `save/find/delete` means Day 3's PostgreSQL swap only touches the repository internals, not the business logic in `main.ts/main.py`.
 - **Async from day one**: You order the pizza by phone and keep walking around the kitchen — the order still arrives, you just didn't stall the whole room. Even in-memory repos use `async`, so transitioning to real DB calls (asyncpg/Drizzle on Day 3) is a one-line change inside the method body — no signature changes needed.
+
+---
 
 ## Broke & Fixed
 
@@ -79,31 +91,51 @@ Torn out hand-drilled plumbing and called a professional.
 
 **Lesson**: pnpm's `approve-builds` for native dependencies is a gotcha. The `pnpm store prune` command cleans up orphaned packages from the global store. Generic repo type constraint was the main code bug.
 
-### TypeScript Generic Type Error
-The key doesn't match the lock. `Property 'id' does not exist on type 'T'` in `InMemoryRepository<T>`.
-**Fix**: Added type constraint `T extends { id: string }` so `findById` can safely access `.id` on generic type parameter.
+And the five code-and-config bugs the two kitchens drifted on — one row each:
 
-### Python Type Mismatch
-An envelope labeled "photo" containing a coupon — technically delivered, but nobody trusts it. `id: UUID = str(uuid4())` — the type annotation said `UUID` but the default was a `string`. Pydantic silently coerced it, but it was misleading and would break if strict validation was enabled.
-**Fix**: Changed to `id: str = Field(default_factory=lambda: str(uuid4()))` — type and value now match. Also fixed `created_at: datetime = datetime.now` → `Field(default_factory=datetime.now)` (calling the function vs referencing it).
+| # | Bug | Picture | Why it broke | Fix |
+|---|-----|---------|-------------|-----|
+| 1 | **TS generic type error** | *The key doesn't match the lock.* | `Property 'id' does not exist on type 'T'` in `InMemoryRepository<T>` — the generic makes no promise that `.id` exists. | Constrained `T extends { id: string }` so `findById` can safely access `.id`. |
+| 2 | **Python type mismatch** | *An envelope labeled "photo" containing a coupon — technically delivered, nobody trusts it.* | `id: UUID = str(uuid4())` — the annotation said UUID, the default was a string. Pydantic silently coerced; strict validation would have broken. | `id: str = Field(default_factory=lambda: str(uuid4()))` — type and value now match. Also `created_at: datetime = datetime.now` → `Field(default_factory=datetime.now)` — calling the function, not referencing it. |
+| 3 | **Repository API drift** | *Two shops agreed to mirror each other, then one invented its own return policy.* | Python `delete(entity: T)` took a full entity object; TypeScript `delete(id: string)` took just the ID. The tracks were supposed to mirror. | Aligned Python to `delete(id: str)` — both tracks now have identical signatures. |
+| 4 | **TS fire-and-forget** | *Ordered by phone and never picked it up — the caller hung up, nobody heard the kitchen.* | `main()` at the bottom of `main.ts` was called without `await` — unhandled promise rejections would be silently swallowed. | `await main()` at top level. |
+| 5 | **SSH key / git push failure** | *Knocking at a door that doesn't exist — GitHub's side was fine, the alias in the doorbell config wasn't.* | `git push origin dev` → SSH permission denied — the `~/.ssh/config` had the wrong host alias. | `ssh -T git@github.com` to diagnose → `nano ~/.ssh/config` → `git push origin dev` succeeded. |
 
-### Repository API Drift
-Two shops agreed to mirror each other, then one invented its own return policy. Python `delete(entity: T)` took a full entity object, while TypeScript `delete(id: string)` took just an ID string. The tracks were supposed to mirror each other.
-**Fix**: Aligned Python to `delete(id: str)` — both tracks now have identical signatures.
-
-### TypeScript Fire-and-Forget
-Ordered by phone and never picked it up — the caller hung up, and nobody heard the kitchen. `main()` at the bottom of `main.ts` was called without `await`, meaning unhandled promise rejections would be silently swallowed.
-**Fix**: Changed to `await main()` at top level.
-
-### SSH Key / Git Push Failure
-Knocking at a door that doesn't exist — GitHub's side was fine, the alias in the doorbell config wasn't. `git push origin dev` failed with SSH permission denied — the SSH config had the wrong host alias.
-**Fix**: Ran `ssh -T git@github.com` to diagnose, then `nano ~/.ssh/config` to fix the config, then `git push origin dev` succeeded.
+**Lesson that outlives the day:** parity on Day 1 is a *signatures* contract, and the mirror is checked by reader, not tooling — bugs 2 and 3 were both *silent* (Pydantic coerced; the two tracks simply disagreed) until the other kitchen compared. From here on, when the kitchens drift, the drift itself is the bug.
 
 ## Blocked / Deferred
 
 - **Deferred to Day 3**: PostgreSQL schema, Drizzle ORM, real persistence layer.
 - **Deferred to Deepening 1**: ULID/nanoid ID generation swap (current `uuid4` is sufficient for learning).
 - **Carried forward**: In-memory repositories will be replaced with PostgreSQL-backed repos on Day 3.
+
+---
+
+## Request / Response Flow
+
+> 🔩 **Format note.** Rendered below in **Mermaid** — the de-facto inline-diagram format for `.md` files: native on GitHub, VS Code, Obsidian, and any static site with a `mermaid` plugin, so the diagram follows the *note itself* without a hosted image.
+
+### The entry story — main() is the day's only client
+
+```mermaid
+flowchart LR
+    A["main — one small story per kitchen"] --> B["workspace, project, issue — three entities created"]
+    B --> C["generateId stamps each with a UUID4 (randomUUID / uuid.uuid4)"]
+    C --> D["repository saves them — TS Map, Python dict — already ASYNC"]
+    D --> E["findAll + findById read the kitchen back"]
+    E --> F["both kitchens print the story — the heart beats"]
+```
+
+One client only: `main()`, driving create → save → query against the in-memory repository. Note the save is *already async* — that is the point of the diagram: Day 2 swaps this caller for HTTP routes without touching a signature, and Day 3 swaps the cellar underneath without touching the caller. There is no HTTP surface yet; the repository *is* the request boundary for the day.
+
+| Format | Where it renders | Why you might swap |
+|---|---|---|
+| Mermaid (default) | GitHub, VS Code, Obsidian, any site with a plugin | the standing choice |
+| PlantUML | any site with a plugin / hosted | richer UML shapes |
+| Excalidraw (JSON embed) | dedicated pages | hand-drawn tone |
+| Hosted image (PNG) | anywhere | zero renderer dependency, but the diagram no longer travels with the note |
+
+---
 
 ## Commands Run
 
@@ -158,8 +190,19 @@ Knocking at a door that doesn't exist — GitHub's side was fine, the alias in t
 | `uv sync` | Python | Install/update dependencies from pyproject.toml |
 | `uv run python -m src.main` | Python | Run Python entry point |
 
-## ADRs Created
+---
 
+## Outcome
+
+End of day one: two hearts, both beating in memory.
+
+- **Both skeletons run.** `pnpm dev` (TS) and `uv run python -m src.main` (Python) each print the same create → save → query story from the same 12-file shape.
+- **The swap point is frozen.** The repositories are async, `Map`/`dict`-backed, behind save/find — Day 3's cellar (ADR-002) changes the *bodies*, never the signatures. The parity wall on Day 1 is signatures.
+- **Named, not flaky — deferred debt:** ID generation (`uuid4` for now; ULID is Phase 2 — ADR-003) and persistence (in-memory is explicitly temporary — ADR-002). No test suite yet: "both kitchens print the same story" is a reader check, not an assertion — the asserting parity wall arrives with the later days.
+
+---
+
+## ADRs Created
 
 | ADR | Decision | Status |
 |---|---|---|
@@ -169,14 +212,22 @@ Knocking at a door that doesn't exist — GitHub's side was fine, the alias in t
 
 Both tracks use uuid4 from the start (`crypto.randomUUID()` in TS, `uuid4()` in Python). ULID is the planned upgrade for Phase 2.
 
-## Preview of Next day
+---
 
-The restaurant gets its counter: guests arrive at the front of house, orders go back to the two kitchens, food comes out to the table — opening for business.
+## Preview: Day 2 — API Skeleton
 
-**Day 2: API Skeleton** — Wrap today's in-memory repos behind HTTP endpoints.
-- **Concepts**: REST routes, request/response cycle, framework routing (FastAPI decorators, Fastify route registration)
-- **Files**: `ts/src/server.ts` (Fastify app), `py/src/server.py` (FastAPI app), new `main.ts`/`main.py` entry points
-- **Prerequisites**: Install `fastify` (npm) and `fastapi` + `uvicorn` (pip/uv) before starting
-- **Connection**: Today's `InMemoryRepository` becomes the data layer behind each endpoint — same `findAll`/`findById`/`save` calls, now triggered by HTTP requests instead of `main()`
+> 🍜 *Day 1 built the two kitchens. Day 2 gives them a counter.* The restaurant gets its counter: guests arrive at the front of house, orders go back to the two kitchens, food comes out to the table — opening for business.
+
+- **What's being built:** wrap today's in-memory repos behind HTTP endpoints.
+- **Concepts:** REST routes, request/response cycle, framework routing (FastAPI decorators, Fastify route registration)
+- **Headline gotcha:** the routing dial is per-kitchen (Fastify route registration vs FastAPI decorators) — the mirror here is the *route table and the status strings*, not the syntax.
+- **Files:** `ts/src/server.ts` (Fastify app), `py/src/server.py` (FastAPI app), new `main.ts`/`main.py` entry points
+- **Prerequisites:** Install `fastify` (npm) and `fastapi` + `uvicorn` (pip/uv) before starting
+- **Connection:** Today's `InMemoryRepository` becomes the data layer behind each endpoint — same `findAll`/`findById`/`save` calls, now triggered by HTTP requests instead of `main()`
+
+---
 
 ## Notes
+
+- Prompt file used: `master.md` (day 01 ran from the rules file directly; no per-day prompt file exists).
+- Roadmap reference: `tech-foundry/docs/roadmaps/v4/master.md`
