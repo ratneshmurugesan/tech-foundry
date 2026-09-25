@@ -45,7 +45,21 @@ I build **every restaurant the foundry casts — *every single one* — in two d
 - 🟦 Kitchen **A** speaks a language called **TypeScript** (this is what runs in web browsers, like your games and websites)
 - 🟩 Kitchen **B** speaks a language called **Python** (this is what lots of big computers use to do serious work)
 
-**Both kitchens must make the EXACT same dishes.** If Kitchen A gives you a "Buy milk" note, Kitchen B *must* give you the very same one. If they ever disagree, **I fix both**. This forces me to learn two whole languages *and* how they talk to each other. (Developers call this "the parity wall" — I call it *"the two chefs must never fight over the menu."*)
+**Both kitchens must make the EXACT same dishes.** If Kitchen A gives you a "Buy milk" note, Kitchen B *must* give you the very same one. If they ever disagree, **I fix both**.
+
+```mermaid
+flowchart LR
+  A["🟦 Kitchen A<br/>TypeScript"]:::kA
+  B["🟩 Kitchen B<br/>Python"]:::kB
+  D["🍽 The SAME dish<br/>in & out"]:::dish
+  A -->|byte-identical| D
+  B -->|byte-identical| D
+  classDef kA fill:#d4e6ff,stroke:#1f6feb;
+  classDef kB fill:#d8f0d8,stroke:#2ea44f;
+  classDef dish fill:#fff8c5,stroke:#d4a72c,stroke-width:2px;
+```
+
+This forces me to learn two whole languages *and* how they talk to each other. (Developers call this **"the parity wall"** — I call it *"the two chefs must never fight over the menu."*)
 
 ---
 
@@ -132,24 +146,43 @@ Right now, app **#1** is **Taskflow** — a single-tenant task/issue tracker. Th
 
 My whole adventure is organized by a 30-year-old software rule I call **"Make it Work → Make it Right → Make it Fast"** (from Extreme Programming / Kent Beck). Think of it like cooking: first get a *cookable* dish, then make it *genuinely good*, only then make it *fast to serve*.
 
+```mermaid
+flowchart TD
+  P1["🥄 PHASE 1 — MAKE IT WORK<br/><i>It runs. You can curl it. A human can use it.</i>"]
+  P2["🥘 PHASE 2 — MAKE IT RIGHT<br/><i>Real users, real login, real access rules, real tests, clean architecture.</i>"]
+  P3["⚡ PHASE 3 — MAKE IT FAST<br/><i>Caching, scaling, monitoring, hardening for real traffic.</i>"]
+  P1 --> P2 --> P3
+  classDef here fill:#e6ffed,stroke:#2ea44f,stroke-width:2px;
+  classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:2px,stroke-dasharray:4 3;
+  classDef later fill:#f6f8fa,stroke:#8250df,stroke-width:1px,stroke-dasharray:4 3;
+  class P1 here;
+  class P2 next;
+  class P3 later;
 ```
-PHASE 1: MAKE IT WORK      ← YOU ARE HERE (days 1-7 shipped)
-  "It runs. You can curl it. A human can use it."
-        ↓
-PHASE 2: MAKE IT RIGHT      ← NEXT (days 8-11 = auth + RBAC, then tests/quality)
-  "Real users, real login, real access rules, real tests, clean architecture."
-        ↓
-PHASE 3: MAKE IT FAST       ← LATER
-  "Caching, scaling, monitoring, hardening for real traffic."
-```
+
+*(**Green** = you are here · **dashed yellow** = next · **dashed violet** = later)*
 
 ### Specifically, next up (Days 10-11): **RBAC — the key to your rooms**
 
 - So far (day 8-9) the **badge reader** tells us ***who*** you are (`request.user.sub`).
 - Next: a **membership table** + a **role check** that tells us ***which workspaces you belong in*** (`owner` / `member`).
-- The two ideas, in one line each:
-  - **401 = we don't *know* who you are** (the door, day 8-9)
-  - **403 = we *know* you, but you aren't *allowed*** (the key, day 10-11) ← next
+- The two ideas, in one gate each:
+
+```mermaid
+flowchart LR
+  R["🙋 a request walks in"] --> B
+  B["🎫 badge reader<br/>(day 8-9)"] -->|no / bad badge| F1["❌ 401<br/><i>We don't know who you are</i>"]
+  B -->|badge ok: we KNOW you| K
+  K["🔑 RBAC key check<br/>(day 10-11)"] -->|you're not allowed| F3["❌ 403<br/><i>We know you, but no</i>"]
+  K -->|role fits the room| OK["✅ you're in"]
+  classDef fail fill:#ffebe9,stroke:#cf222e,stroke-width:1px;
+  classDef good fill:#e6ffed,stroke:#2ea44f,stroke-width:2px;
+  class F1,F3 fail;
+  class B,K,OK good;
+```
+
+  - **401 = we don't *know* who you are** (the door, day 8-9)  → the left branch
+  - **403 = we *know* you, but you aren't *allowed*** (the key, day 10-11)  ← next  → the right branch
 - **Owner** can invite & delete a workspace; a **Member** can view & work in it.
 - A "lighthouse" set of tests proves **both kitchens decide the same thing** for a badged caller (the *third* wall of parity, after the error contract and the badge).
 
