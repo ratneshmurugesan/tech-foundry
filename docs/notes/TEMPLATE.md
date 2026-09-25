@@ -192,6 +192,7 @@ Story-first overview of what tomorrow covers — the everyday picture of the day
 Free-form notes, observations, or anything that doesn't fit above (story-first prose, see Writing Standard above). Include the fixed footer receipts:
 - Prompt file used: `tech-foundry/docs/prompts/day-XX-[slug]-[date].md` (name of TODAY's prompt, or `master.md` if the day ran from the rules file directly)
 - Roadmap reference: `tech-foundry/docs/roadmaps/v4/master.md`
+- README touched: yes — *which touchpoint* (Journey Map flip / dates caption / ADR row / Learning Ledger / up-next swap / app card) and the diff went into the closeout commit; or **no change today** (a valid outcome)
 - Any deviations from the planned day
 - Ideas for future days
 ````

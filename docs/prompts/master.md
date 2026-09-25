@@ -69,6 +69,8 @@ ADRs live separately in `tech-foundry/docs/adrs/` and are referenced by number (
  - Keep explanations crisp and concise; max 2-3 lines for each bullet point in all type of docs like adr, note and prompt.
  - Always explain technical terms using simple layman-term english that a 5-year old kid can understand and connect them to a restaurant analogy all the time. Keep explanations clear, practical, and easy to understand and avoid unnecessary fluff.
 
+17. **Touch the top-level `README.md` exactly once at day-close — from a checklist, never mid-day.** The README is a *public summary* of what already lives in `docs/notes/` + `docs/adrs/` + `apps/`; it never holds fresh detail, and it is not where today gets "written up" — the day writes itself in the note + ADR. At day-close, apply only the standing touchpoints in `roadmaps/v4/master.md` §17 (Journey Map status flip, the dates caption, an ADR row when one lands, a Learning Ledger row for a durable lesson, the one-line "up next" swap, an app card at a boundary) — and if none applies today, a no-change README is a *valid* outcome (a diary is allowed gaps). Edit in place; keep heading slugs and the `-->` chain identical so links and Mermaid survive. After editing, verify the §17 invariants: **0 U+FE0F** (GitHub's Mermaid breaks on it — the Day 8 lesson), balanced ` ``` ` fences, every in-page `#` link resolves, tables intact. A `README.md` diff belongs in the day's closeout commit alongside the note + ADR + Day N+1 prompt.
+
 ---
 
 ## Usage
@@ -82,9 +84,10 @@ The AI will:
 1. Load this prompt (rules)
 2. Load the roadmap (context, phase, sprint, day definition)
 3. Check all notes in order in tech-foundry/docs/notes/ to understand whats done and what day is next. compare previous day's preview of next day section to find a conenction between subsequent notes .
-4. Generate the complete day breakdown following all 16 rules
+4. Generate the complete day breakdown following all 17 rules
 5. After execution, generate the notes file at `tech-foundry/docs/notes/`
-6. Day-close final step (before the closeout commit): draft **Day N+1's prompt file** at `tech-foundry/docs/prompts/day-XX-[slug]-[yyyy-mm-dd-hhmm].md`, built from the notes file's "Preview of Next Day" section + the roadmap's next row. It points back at this file (master) and carries the day-specific constraints (options to settle, ADR candidates, deliverables bar, next-day preview). Day notes + ADR + next prompt file are committed together in one closeout commit, so no session ends leaving the next day without its kickoff file.
+6. Apply the **README touchpoints** (Rule 17) to the top-level `README.md` from the §17 checklist — only where today's work touched a standing summary; if none applies, the README simply does not change today (write that into the note's footer).
+7. Day-close final step (before the closeout commit): draft **Day N+1's prompt file** at `tech-foundry/docs/prompts/day-XX-[slug]-[yyyy-mm-dd-hhmm].md`, built from the notes file's "Preview of Next Day" section + the roadmap's next row. It points back at this file (master) and carries the day-specific constraints (options to settle, ADR candidates, deliverables bar, next-day preview). Day notes + ADR (+ any README diff) + next prompt file are committed together in one closeout commit, so no session ends leaving the next day without its kickoff file — and the README never silently rots.
 
 ---
 

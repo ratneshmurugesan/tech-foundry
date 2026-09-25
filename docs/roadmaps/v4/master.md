@@ -4,7 +4,7 @@
 > **Purpose**: Single source of truth. Survives workspace switches. Say "Read `roadmaps/v4/master.md`" to restore full context.
 > **Location**: `roadmaps/v4/master.md`
 
-> **⚠️ Plan-deviation note (live reality, added 2026-09-17).** This plan was written against the **Oracle Free Tier** — that was the *aspiration*. The deploy that actually shipped (Day 6) was an **AWS Free Tier EC2** box (`54.208.101.60`, us-east-1; `host` → `ec2-54-208-101-60.compute-1.amazonaws.com`), because the box that existed was already AWS. **The recipe is provider-agnostic** — `docker compose -f … -f docker-compose.prod.yml up -d --build` runs identically on any $0 VM — so every "Oracle" below reads as *"$0 Free Tier VM of your choice"*; "4 ARM cores, 24GB" describes the *tier class* (e.g. the AWS `a1`/`a1g` family), not the live box. The **live deploy of record is `notes/day-06-aws-deploy-2026-09-11-1718.md`** (2026-09-17), which carries the correction and the receipts; its note is **the** record where plan and reality diverge.
+> **⚠ Plan-deviation note (live reality, added 2026-09-17).** This plan was written against the **Oracle Free Tier** — that was the *aspiration*. The deploy that actually shipped (Day 6) was an **AWS Free Tier EC2** box (`54.208.101.60`, us-east-1; `host` → `ec2-54-208-101-60.compute-1.amazonaws.com`), because the box that existed was already AWS. **The recipe is provider-agnostic** — `docker compose -f … -f docker-compose.prod.yml up -d --build` runs identically on any $0 VM — so every "Oracle" below reads as *"$0 Free Tier VM of your choice"*; "4 ARM cores, 24GB" describes the *tier class* (e.g. the AWS `a1`/`a1g` family), not the live box. The **live deploy of record is `notes/day-06-aws-deploy-2026-09-11-1718.md`** (2026-09-17), which carries the correction and the receipts; its note is **the** record where plan and reality diverge.
 
 ---
 
@@ -759,7 +759,7 @@ We move on: Next deepening
 
 ## 16. Current Status & Next Steps
 
-### Where We Are (2026-08-11):
+### Where We Are (last updated 2026-09-25, through Day 8-9):
 - ✅ 12 OSS repos analyzed (Ghost, Plane, Zulip, Storybook, Playwright, Mermaid, Discourse, Puppeteer, OpenHands, Hoppscotch, Streamlit, Lighthouse)
 - ✅ 7 universal patterns extracted
 - ✅ 36-week compressed roadmap with build sprints + deepening passes
@@ -771,9 +771,40 @@ We move on: Next deepening
 - ✅ OSS reference map (which repo to look at, when)
 
 ### What's Next:
-1. **Scaffold Taskflow** — Create `tech-foundry/taskflow/` with minimal structure
-2. **Start Sprint 1 Day 1** — TypeScript discriminated union + Python Pydantic (one day, not a week)
-3. **Ship by Day 7** — Deployed URL, accessible from phone
+1. **Day 8-9** — Auth: badge reader validates the Auth0 ID token, both tracks (done — `notes/day-08-auth0-badge-reader-*.md` + ADR-011); live URL now returns 401 until a valid `Authorization: Bearer <Access Token>` is sent.
+2. **Day 10-11** — Workspace ownership + RBAC: the doorman who checks the badge *and* the lease (Owner/Viewer), per ADR-007's 403-with-`code` contract. (Prompt: `docs/prompts/day-10-workspace-ownership-rbac-*.md`.)
+3. **Day 12-13** — Razorpay checkout (create order → verify payment).
+
+---
+
+## 17. README Maintenance (End-of-Day Closeout)
+
+The top-level `README.md` is a **public summary** of what already lives in `docs/notes/` + `docs/adrs/` + `apps/`. It is *not* a place for fresh detail. It rots on its own — the U+FE0F Mermaid break on Day 8 is the standing caution — so it gets a small, fixed, end-of-day upkeep, owned by the day-close pipeline (`prompts/master.md` Rule 17) rather than "remembered ad hoc between sessions."
+
+### Standing touchpoints (apply at day-close, only where today's work touched them)
+
+| Trigger | README section | What changes |
+|---|---|---|
+| A day finishes | Journey Map | flip the current-day node `next` → `done`; promote the following day to `next`. Keep the `-->` chain, the `done`/`next` classes, and every label string identical so Mermaid re-renders the same way. |
+| The date moves | Journey Map caption | bump the date range (e.g. `21 Sep` → `4 Oct`) and the "~N weeks" figure. This is the *real* clock, kept honest. |
+| A new ADR lands | ADR table | add one row (number, name, one-line reason, link). |
+| A lesson is genuinely durable (survives past its day) | Learning Ledger | add one row. Day-specific gotchas stay in the day note; the ledger is for the *few* that compound. |
+| Nothing above (a quiet day) | *(none)* | **No README diff.** A valid, by-design outcome — a diary is allowed gaps, and that is not rot. |
+
+Boundaries (rarer, ~monthly or per-app): the Work/Right/Fast highlight moves at a phase change, and a new app card is added when the next "restaurant" starts. Same discipline — *apply the pattern*, never restructure.
+
+### Invariants — these are what actually break GitHub; re-verify after every README edit
+
+- **0 U+FE0F (variation selector)** — GitHub's Mermaid parser rejects it (Day 8). CI already enforces it in the `github_pages` workflow; new/edited diagrams are the usual offender, so strip any.
+- **Fence balance** — every opening ` ``` ` has a matching close. (Add a check: the count of ` ``` ` lines is even.)
+- **In-page links resolve** — every `[x](#slug)` matches a real heading; renaming a heading silently breaks its anchors, so keep slugs stable or update all references. (Add a check.)
+- **Mermaid blocks parse** — run the `mermaid.parse()` check on any block you add or touch, exactly as `docs/notes/TEMPLATE.md` does (Day 8's first failure). Do not eyeball.
+- **Tables stay tables** — no stray `\|` in a cell; a literal pipe inside a cell must be `\|`.
+- **Heading slugs stay stable** — links, bookmarks, and other docs point at them; a rename must update every reference.
+
+### Why this is *maintenance*, not *content*
+
+The README summarizes; the **source of truth** is `docs/notes/` (what happened) and `docs/adrs/` (why a decision). When the two disagree, the README is corrected to match them — never the reverse. So upkeep means "make the summary true again," which is mechanical (~5-10 min), not writing.
 
 ---
 
