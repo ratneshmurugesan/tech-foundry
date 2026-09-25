@@ -53,13 +53,26 @@ I build **every restaurant the foundry casts — *every single one* — in two d
 
 Think of this adventure as a road. I've traveled down it **8 days** so far, and I know exactly where the next stretch is.
 
+```mermaid
+flowchart LR
+  D1["🏠 DAY 1<br/>types & async"]
+  D2["🍝 DAY 2<br/>API skeleton"]
+  D3["🚪 DAY 3<br/>Postgres cellar"]
+  D4["🚨 DAY 4<br/>error contract"]
+  D5["🐳 DAY 5<br/>Docker Compose"]
+  D6["☁ DAY 6<br/>AWS deploy"]
+  D7["✅ DAY 7<br/>CI robot"]
+  D8["🎫 DAY 8-9<br/>Auth0 badge reader"]
+  D10["🔑 DAY 10-11<br/>RBAC (up next)"]
+  F["🚀 future<br/>Make it Right → Fast"]
+  D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7 --> D8 --> D10 --> F
+  classDef done fill:#e6ffed,stroke:#2ea44f,stroke-width:1px;
+  classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:1px,stroke-dasharray:4 3;
+  class D1,D2,D3,D4,D5,D6,D7,D8 done;
+  class D10,F next;
 ```
-🏠 DAY 1        🍝 DAY 2         🚪 DAY 3        🚨 DAY 4          🐳 DAY 5         ☁ DAY 6          ✅ DAY 7         🎫 DAY 8-9        🔑 DAY 10-11   🚀 (future)
-types & words →  a skeleton →    the Fridge →    the menu of  →   pack it    →     put it →       auto-     the Badge  →     the Key        make it      → ...
-how to talk      the doors      (postgres)      errors (when   in a box     live on    check my   Reader      to YOUR        RIGHT, then
-                   works         (the cellar)   it goes wrong) (docker)      the internet  code for me   (Auth0)     rooms (RBAC)    make it FAST
-  ✅ done          ✅ done        ✅ done         ✅ done         ✅ done       ✅ done       ✅ done        ✅ done          ⬜ up next
-```
+
+*(**Green** = done ✅ · **dashed yellow** = up next ⬜ · the road reads left → right, "make it work" into "make it right" → "make it fast")*
 
 | Day | Restaurant part | What I learned (the "why") |
 |---|---|---|
