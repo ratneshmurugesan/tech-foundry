@@ -54,9 +54,9 @@ flowchart LR
   D["🍽 The SAME dish<br/>in & out"]:::dish
   A -->|byte-identical| D
   B -->|byte-identical| D
-  classDef kA fill:#d4e6ff,stroke:#1f6feb;
-  classDef kB fill:#d8f0d8,stroke:#2ea44f;
-  classDef dish fill:#fff8c5,stroke:#d4a72c,stroke-width:2px;
+  classDef kA fill:#d4e6ff,stroke:#1f6feb,stroke-width:2px,color:#0d1117;
+  classDef kB fill:#d8f0d8,stroke:#2ea44f,stroke-width:2px,color:#0d1117;
+  classDef dish fill:#fff8c5,stroke:#bf8700,stroke-width:2px,color:#0d1117;
 ```
 
 This forces me to learn two whole languages *and* how they talk to each other. (Developers call this **"the parity wall"** — I call it *"the two chefs must never fight over the menu."*)
@@ -80,13 +80,15 @@ flowchart LR
   D10["🔑 DAY 10-11<br/>RBAC (up next)"]
   F["🚀 future<br/>Make it Right → Fast"]
   D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7 --> D8 --> D10 --> F
-  classDef done fill:#e6ffed,stroke:#2ea44f,stroke-width:1px;
-  classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:1px,stroke-dasharray:4 3;
+  classDef done fill:#e6ffed,stroke:#2ea44f,stroke-width:2px,color:#0d1117;
+  classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:2px,stroke-dasharray:4 3,color:#0d1117;
   class D1,D2,D3,D4,D5,D6,D7,D8 done;
   class D10,F next;
 ```
 
 *(**Green** = done ✅ · **dashed yellow** = up next ⬜ · the road reads left → right, "make it work" into "make it right" → "make it fast")*
+
+*📅 **The real pace** behind this road: Day 1 started **14 Aug 2026**; by **21 Sep** it's Day 8-9 — roughly a day each, with real life in between. **~5 weeks for 8 days shipped** — this is a *foundry diary*, not a stopwatch sprint.*
 
 | Day | Restaurant part | What I learned (the "why") |
 |---|---|---|
@@ -152,9 +154,9 @@ flowchart TD
   P2["🥘 PHASE 2 — MAKE IT RIGHT<br/><i>Real users, real login, real access rules, real tests, clean architecture.</i>"]
   P3["⚡ PHASE 3 — MAKE IT FAST<br/><i>Caching, scaling, monitoring, hardening for real traffic.</i>"]
   P1 --> P2 --> P3
-  classDef here fill:#e6ffed,stroke:#2ea44f,stroke-width:2px;
-  classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:2px,stroke-dasharray:4 3;
-  classDef later fill:#f6f8fa,stroke:#8250df,stroke-width:1px,stroke-dasharray:4 3;
+  classDef here fill:#e6ffed,stroke:#2ea44f,stroke-width:2px,color:#0d1117;
+  classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:2px,stroke-dasharray:4 3,color:#0d1117;
+  classDef later fill:#f6f8fa,stroke:#8250df,stroke-width:1px,stroke-dasharray:4 3,color:#0d1117;
   class P1 here;
   class P2 next;
   class P3 later;
@@ -175,8 +177,10 @@ flowchart LR
   B -->|badge ok: we KNOW you| K
   K["🔑 RBAC key check<br/>(day 10-11)"] -->|you're not allowed| F3["❌ 403<br/><i>We know you, but no</i>"]
   K -->|role fits the room| OK["✅ you're in"]
-  classDef fail fill:#ffebe9,stroke:#cf222e,stroke-width:1px;
-  classDef good fill:#e6ffed,stroke:#2ea44f,stroke-width:2px;
+  classDef fail fill:#ffebe9,stroke:#cf222e,stroke-width:1px,color:#0d1117;
+  classDef good fill:#e6ffed,stroke:#2ea44f,stroke-width:2px,color:#0d1117;
+  classDef start fill:#e7f0f6,stroke:#1f6feb,stroke-width:1px,color:#0d1117;
+  class R start;
   class F1,F3 fail;
   class B,K,OK good;
 ```
