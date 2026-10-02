@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
-import { getDb, issues, projects, workspaces } from "./db";
-import { Issue, Project, Workspace } from "./types";
+import { and, eq } from "drizzle-orm";
+import { getDb, issues, projects, workspaceMembers, workspaces } from "./db";
+import { Issue, Project, Workspace, WorkspaceMember } from "./types";
 import generateId from "./ids";
 
 
 class PostgresRepository {
-
     async findAllWorkspaces(): Promise<Array<Workspace>> {
         const db = getDb()
         const rows = await db.select().from(workspaces);
@@ -17,16 +16,16 @@ class PostgresRepository {
         }))
     }
 
-    async findWorkspaceById(id: string): Promise<Workspace | undefined> {
+    async findWorkspaceById(id: string): Promise<Workspace> {
         const db = getDb()
         const rows = await db.select().from(workspaces).where(eq(workspaces.id, (id)))
         const row = rows[0]
 
-        return row ? {
+        return {
             id: row.id,
             name: row.name,
             created_at: row.created_at as Date
-        } : undefined
+        }
     }
 
     async saveWorkspace(name: string): Promise<Workspace> {
@@ -56,7 +55,6 @@ class PostgresRepository {
 
         return row[0] ?? undefined
     }
-
 
     async deleteWorkspace(id: string): Promise<boolean> {
         const db = getDb()
@@ -214,6 +212,74 @@ class PostgresRepository {
         return rows.length > 0
     }
 
+
+    async findWorkspaceIdFor(worspaceId: string, userId: string): Promise<Workspace>{
+        const db = getDb()
+        const rows = await db
+            .select({
+                id: workspaces.id,
+                name: workspaces.name,
+                created_at: workspaces.created_at,
+            })
+            .from(workspaces)
+            .innerJoin(
+                workspaceMembers,
+                eq(workspaceMembers.workspace_id, workspaces.id)
+            )
+            .where(
+                and(
+                    eq(workspaceMembers.user_id, userId),
+                    eq(workspaces.id, worspaceId)
+                )
+            )
+            .limit(1)
+
+        return rows[0]
+    }
+
+    async findWorkspacesFor(userId: string): Promise<Workspace[]>{
+        const db = getDb()
+        const rows = await db
+            .select({
+                id: workspaces.id,
+                name: workspaces.name,
+                created_at: workspaces.created_at,
+            })
+            .from(workspaces)
+            .innerJoin(
+                workspaceMembers,
+                eq(workspaceMembers.workspace_id, workspaces.id)
+            )
+            .where(eq(workspaceMembers.user_id, userId))
+        return rows
+    }
+
+    async findMembership(workspaceId: string, sub: string): Promise<WorkspaceMember | undefined> {
+        const db = getDb()
+        const membershipRows = await db
+            .select()
+            .from(workspaceMembers)
+            .where(
+                and(
+                    eq(workspaces.id, (workspaceId)),
+                    eq(workspaceMembers.user_id, (sub)))
+            )
+        return membershipRows.length
+            ? membershipRows[0]
+            : undefined
+    }
+
+    async inviteMember(workspaceId: string, sub: string) {
+        const db = getDb()
+        const id = generateId()
+
+        const rows = await db
+            .insert(workspaceMembers)
+            .values({ id, workspace_id: workspaceId, role: "member", user_id: sub })
+            .returning();
+
+        return rows[0]
+    }
 }
 
 // export default InMemoryRepository;

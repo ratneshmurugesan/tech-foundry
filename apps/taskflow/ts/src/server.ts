@@ -3,8 +3,9 @@ import PostgresRepository from './repository'
 import z from 'zod'
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod'
 import { registerErrorHandler } from './errorHandler'
-import { DatabaseCrashError, NotFoundError } from './errors'
+import { DatabaseCrashError, ForbiddenError, NotFoundError } from './errors'
 import { doorHook } from './auth'
+import { authorizeHook } from './authorize';
 
 const repo = new PostgresRepository()
 
@@ -17,6 +18,7 @@ fastify.setSerializerCompiler(serializerCompiler)
 // Setting Zod as the default Type Provider
 const app = fastify
     .addHook("onRequest", doorHook)
+    .addHook("onRequest", authorizeHook)
     .withTypeProvider<ZodTypeProvider>()
 
 // Registering custom semantic error handler
@@ -47,6 +49,13 @@ const issueSchema = z.object({
 const createIssueSchema = issueSchema.omit({ id: true }).extend({ status: z.enum(["open", "closed"]).optional().default("open") })
 const updateIssueSchema = createIssueSchema.partial()
 
+const workspaceMemberSchema = z.object({
+    id: z.uuid(),
+    workspace_id: z.uuid(),
+    user_id: z.uuid(),
+    role: z.enum(["owner", "member"]),
+})
+const createWorkspaceMemberSchema = workspaceMemberSchema.omit({ id: true })
 
 app.get("/", {
     schema: {
@@ -72,8 +81,9 @@ app.get("/workspaces", {
         }
     }
 }, async (request, response) => {
+    const sub = request.user?.sub
     try {
-        const data = await repo.findAllWorkspaces()
+        const data = await repo.findWorkspacesFor(sub!)
         return response.code(200).send(data)
     } catch (dbError) {
         throw new DatabaseCrashError(dbError)
@@ -105,11 +115,12 @@ app.get("/workspaces/:id", {
     }
 }, async (request, response) => {
     const { id } = request.params
+    const sub = request.user?.sub
 
     let existingWorkspace;
 
     try {
-        existingWorkspace = await repo.findWorkspaceById(id)
+        existingWorkspace = await repo.findWorkspaceIdFor(id, sub!)
     } catch (dbError) {
         // 500 Error: Hidden from user, fully logged internally
         throw new DatabaseCrashError(dbError);
@@ -133,6 +144,15 @@ app.patch("/workspaces/:id", {
 }, async (request, response) => {
     const { id } = request.params
     const changes = request.body
+
+    const sub = request.user?.sub
+    if(!sub){
+        throw new ForbiddenError("Not a member of this workspace")
+    }
+    const existingWsm = await repo.findMembership(id, sub)
+    if(existingWsm?.role !== "owner") {
+        throw new ForbiddenError("Requires the owner role")
+    }
 
     let existingWorkspace;
     try {
@@ -160,6 +180,16 @@ app.delete("/workspaces/:id", {
     }
 }, async (request, response) => {
     const { id } = request.params
+
+    const sub = request.user?.sub
+    if(!sub){
+        throw new ForbiddenError("Not a member of this workspace")
+    }
+    const existingWsm = await repo.findMembership(id, sub)
+    if(existingWsm?.role !== "owner") {
+        throw new ForbiddenError("Requires the owner role")
+    }
+
     let isDeleted: boolean
     try {
         isDeleted = await repo.deleteWorkspace(id)
@@ -171,7 +201,50 @@ app.delete("/workspaces/:id", {
     }
     return response.code(204).send()
 })
+app.get("/workspaces/:id/members", {
+    schema: {
+        params: idParamSchema,
+        response: {
+            200: workspaceMemberSchema,
+        },
+    }
+},async (request, response) => {
+    const { id } = request.params
+    const sub = request.user?.sub
 
+    let existingMembership;
+
+    try {
+        existingMembership = await repo.findMembership(id, sub!)
+    } catch (dbError) {
+        throw new DatabaseCrashError(dbError);
+    }
+
+    // 404 Error: Safe semantic error
+    if (!existingMembership) {
+        throw new NotFoundError(`WorkspaceMember with ID ${id} does not exist`)
+    }
+
+    return response.code(200).send(existingMembership)
+})
+app.post("/workspaces/:id/members", {
+    schema: {
+        body: createWorkspaceMemberSchema,
+        response: {
+            201: workspaceMemberSchema,
+        }
+    }
+},
+    async (request, response) => {
+        const { workspace_id } = request.body
+        const sub = request.user?.sub
+        try {
+            const newMemberData = await repo.inviteMember(workspace_id, sub!)
+            return response.code(201).send(newMemberData)
+        } catch (dbError) {
+            throw new DatabaseCrashError(dbError)
+        }
+    })
 
 
 app.get("/projects", {
@@ -270,6 +343,15 @@ app.patch("/projects/:id", {
     const { id } = request.params
     const changes = request.body
 
+    const sub = request.user?.sub
+    if(!sub){
+        throw new ForbiddenError("Not a member of this workspace")
+    }
+    const existingWsm = await repo.findMembership(id, sub)
+    if(existingWsm?.role !== "owner") {
+        throw new ForbiddenError("Requires the owner role")
+    }
+
     // Only validate the destination workspace if the request is actually moving the project
     if (changes.workspace_id) {
         let existingWorkspace;
@@ -311,6 +393,15 @@ app.delete("/projects/:id", {
     }
 }, async (request, response) => {
     const { id } = request.params
+
+    const sub = request.user?.sub
+    if(!sub){
+        throw new ForbiddenError("Not a member of this workspace")
+    }
+    const existingWsm = await repo.findMembership(id, sub)
+    if(existingWsm?.role !== "owner") {
+        throw new ForbiddenError("Requires the owner role")
+    }
 
     let existingProject;
     try {
@@ -428,6 +519,15 @@ app.patch("/issues/:id", {
     const { id } = request.params
     const changes = request.body
 
+    const sub = request.user?.sub
+    if(!sub){
+        throw new ForbiddenError("Not a member of this workspace")
+    }
+    const existingWsm = await repo.findMembership(id, sub)
+    if(existingWsm?.role !== "owner") {
+        throw new ForbiddenError("Requires the owner role")
+    }
+
     let existingIssue;
     try {
         existingIssue = await repo.findIssueById(id)
@@ -453,6 +553,15 @@ app.delete("/issues/:id", {
     }
 }, async (request, response) => {
     const { id } = request.params
+
+    const sub = request.user?.sub
+    if(!sub){
+        throw new ForbiddenError("Not a member of this workspace")
+    }
+    const existingWsm = await repo.findMembership(id, sub)
+    if(existingWsm?.role !== "owner") {
+        throw new ForbiddenError("Requires the owner role")
+    }
 
     let existingIssue;
     try {

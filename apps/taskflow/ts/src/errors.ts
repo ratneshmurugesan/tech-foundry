@@ -25,3 +25,10 @@ export class UnauthorizedError extends Error {
         this.name = 'UnauthorizedError'
     }
 }
+
+export class ForbiddenError extends Error {
+    constructor(message = 'Forbidden') {
+        super(message)
+        this.name = 'Forbidden'
+    }
+}

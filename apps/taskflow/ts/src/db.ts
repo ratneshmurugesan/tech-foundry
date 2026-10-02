@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { index, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import postgres, { Sql } from 'postgres'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
@@ -22,6 +22,17 @@ export const issues = pgTable("issues", {
     status: text("status").default("open"),
     created_at: timestamp("created_at", { mode: "date" }).defaultNow()
 })
+
+export const workspaceMembers = pgTable("workspace_members", {
+    id: text("id").primaryKey(),
+    workspace_id: text("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade"}),
+    user_id: text("user_id").notNull(),
+    role: text("role", { enum: ["owner", "member"]}).notNull().default("member"),
+    created_at: timestamp("created_at", { mode: "date" }).defaultNow(),
+}, (t) => [
+    unique("uq_ws_member").on(t.workspace_id, t.user_id),
+    index("ix_ws_member_user").on(t.user_id),
+])
 
 
 let db: ReturnType<typeof drizzle> | undefined;
