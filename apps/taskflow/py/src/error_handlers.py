@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .errors import NotFoundError, ConflictError, DatabaseCrashError, UnauthorizedError
+from .errors import NotFoundError, ConflictError, DatabaseCrashError, UnauthorizedError, ForbiddenError
 
 logger = logging.getLogger("app")
 
@@ -53,7 +53,7 @@ def register_error_handlers(app: FastAPI):
         )
 
     @app.exception_handler(DatabaseCrashError)
-    async def database_crash_exception_handler(request: Request, exc: Exception):
+    async def database_crash_exception_handler(request: Request, exc: DatabaseCrashError):
         logger.error("Internal Server Error Occurred", exc_info=exc)
 
         return JSONResponse(
@@ -66,7 +66,7 @@ def register_error_handlers(app: FastAPI):
         )
 
     @app.exception_handler(UnauthorizedError)
-    async def unauthorized_exception_handler(request: Request, exc: Exception):
+    async def unauthorized_exception_handler(request: Request, exc: UnauthorizedError):
         logger.error("Unauthorized", exc_info=exc)
 
         return JSONResponse(
@@ -78,6 +78,19 @@ def register_error_handlers(app: FastAPI):
             }
         )
 
+    @app.exception_handler(ForbiddenError)
+    async def forbidden_exception_handler(request: Request, exc: ForbiddenError):
+        logger.error("Forbidden", exc_info=exc)
+
+        return JSONResponse(
+            status_code=403,
+            content={
+                    "statusCode": 403,
+                    "error": "Forbidden",
+                    "message": exc.message
+            }
+        )
+    
     # 4. Fallback for DB Crashes and Uncaught Exceptions (HTTP 500)
     @app.exception_handler(Exception)
     async def universal_exception_handler(request: Request, exc: Exception):

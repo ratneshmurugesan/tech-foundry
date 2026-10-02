@@ -1,9 +1,12 @@
 from pydantic  import BaseModel, Field, field_validator, ConfigDict
 from uuid import uuid4
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
-__all__ = ["Workspace", "CreateWorkspace", "UpdateWorkspace", "Project", "CreateProject", "UpdateProject", "Issue", "CreateIssue", "UpdateIssue"]
+__all__ = ["Workspace", "CreateWorkspace", "UpdateWorkspace", 
+           "Project", "CreateProject", "UpdateProject", 
+           "Issue", "CreateIssue", "UpdateIssue",
+           "CreateWorkspaceMember", "WorkspaceMember", "ROLE_RANK"]
 
 class Workspace(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
@@ -47,7 +50,7 @@ class CreateWorkspace(BaseModel):
 class UpdateWorkspace(BaseModel):
     name: Optional[str] | None = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 class CreateProject(BaseModel):
     workspace_id: str = Field(..., description="workspaceId")
@@ -60,7 +63,7 @@ class UpdateProject(BaseModel):
     workspace_id: Optional[str] | None = Field(default=None, description="workspaceId")
     name: Optional[str] | None = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 
@@ -78,7 +81,7 @@ class UpdateIssue(BaseModel):
     title: Optional[str] | None = None
     status: Optional[str] | None = Field(default="open", description="status")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     @field_validator("status")
     @classmethod
@@ -86,3 +89,27 @@ class UpdateIssue(BaseModel):
         if value not in ["open", "closed"]:
             raise ValueError("status must be 'open' or 'closed'")
         return value
+
+class CreateWorkspaceMember(BaseModel):
+    workspace_id: str | None = Field(default=None, description="workspaceId")
+    user_id: str | None = Field(default=None, description="userId")
+    role: Literal["owner", "member"] | None = Field(default="member", description="role")
+    
+    model_config = ConfigDict(from_attributes=True)
+
+    # @field_validator("role")
+    # @classmethod
+    # def validate_role(cls, value: str) -> str:
+    #     if value not in ["member", ""]:
+    #         raise ValueError("role must be 'member' or 'owner'")
+    #     return value
+
+class WorkspaceMember(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    workspace_id: str | None = Field(default=None, description="workspaceId")
+    user_id: str | None = Field(default=None, description="userId")
+    role: Literal["owner", "member"] | None = Field(default="member", description="role")
+
+    model_config = ConfigDict(from_attributes=True)
+
+ROLE_RANK = {"member": 1, "owner": 2}
