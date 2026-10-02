@@ -65,7 +65,7 @@ This forces me to learn two whole languages *and* how they talk to each other. (
 
 ## ⏭ The Journey Map — where we are
 
-Think of this adventure as a road. I've traveled down it **8 days** so far, and I know exactly where the next stretch is.
+Think of this adventure as a road. I've traveled down it **11 days** so far, and I know exactly where the next stretch is.
 
 ```mermaid
 flowchart LR
@@ -77,18 +77,19 @@ flowchart LR
   D6["☁ DAY 6<br/>AWS deploy"]
   D7["✅ DAY 7<br/>CI robot"]
   D8["🎫 DAY 8-9<br/>Auth0 badge reader"]
-  D10["🔑 DAY 10-11<br/>RBAC (up next)"]
+  D10["🔑 DAY 10-11<br/>RBAC roles"]
+  D12["💳 DAY 12-13<br/>Razorpay checkout"]
   F["🚀 future<br/>Make it Right → Fast"]
-  D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7 --> D8 --> D10 --> F
+  D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7 --> D8 --> D10 --> D12 --> F
   classDef done fill:#e6ffed,stroke:#2ea44f,stroke-width:2px,color:#0d1117;
   classDef next fill:#fff8c5,stroke:#d4a72c,stroke-width:2px,stroke-dasharray:4 3,color:#0d1117;
-  class D1,D2,D3,D4,D5,D6,D7,D8 done;
-  class D10,F next;
+  class D1,D2,D3,D4,D5,D6,D7,D8,D10 done;
+  class D12,F next;
 ```
 
 *(**Green** = done ✅ · **dashed yellow** = up next ⬜ · the road reads left → right, "make it work" into "make it right" → "make it fast")*
 
-*📅 **The real pace** behind this road: Day 1 started **14 Aug 2026**; by **21 Sep** it's Day 8-9 — roughly a day each, with real life in between. **~5 weeks for 8 days shipped** — this is a *foundry diary*, not a stopwatch sprint.*
+*📅 **The real pace** behind this road: Day 1 started **14 Aug 2026**; by **29 Sep** it's Day 10-11 — roughly a day each, with real life in between. **~6 weeks for 11 days shipped** — this is a *foundry diary*, not a stopwatch sprint.*
 
 | Day | Restaurant part | What I learned (the "why") |
 |---|---|---|
@@ -141,6 +142,7 @@ Right now, app **#1** is **Taskflow** — a single-tenant task/issue tracker. Th
 | **009** | Remove the "overlay reset" idea | I learned a simpler way to keep the two cellars in sync |
 | **010** | **Zero-service CI** | The day-8 hard-won lesson: the robot-check must **never** need a real db or a real login token |
 | **011** | **Auth0 "badge reader"** (the *door* = who-you-are) | Separating *"verify who you are"* (Auth0, **day 8-9**) from *"are you allowed here"* (RBAC, **day 10-11**) keeps each layer honest and testable |
+| **012** | **Workspace ownership + RBAC** (a *roster* = *which rooms*, not *who it is*) | Role is a **row in a table** (`member` / `owner`), read by an *authorizer* that **trusts** the door's badge. The same door/foreman split, one level up; a *list* of rooms is **narrowed to yours**, never just gated |
 
 ---
 
@@ -164,10 +166,10 @@ flowchart TD
 
 *(**Green** = you are here · **dashed yellow** = next · **dashed violet** = later)*
 
-### Specifically, next up (Days 10-11): **RBAC — the key to your rooms**
+### What we just built (Days 10-11): **RBAC — the key to your rooms**
 
-- So far (day 8-9) the **badge reader** tells us ***who*** you are (`request.user.sub`).
-- Next: a **membership table** + a **role check** that tells us ***which workspaces you belong in*** (`owner` / `member`).
+- From day 8-9 the **badge reader** tells us ***who*** you are (`request.user.sub`).
+- Now: a **membership table** + a **role check** that tells us ***which workspaces you belong in*** (`owner` / `member`).
 - The two ideas, in one gate each:
 
 ```mermaid
@@ -186,9 +188,15 @@ flowchart LR
 ```
 
   - **401 = we don't *know* who you are** (the door, day 8-9)  → the left branch
-  - **403 = we *know* you, but you aren't *allowed*** (the key, day 10-11)  ← next  → the right branch
-- **Owner** can invite & delete a workspace; a **Member** can view & work in it.
+  - **403 = we *know* you, but you aren't *allowed*** (the key, day 10-11) → the right branch
+- **Owner** can invite & delete a workspace; a **Member** can view & patch in it. **Lists** are *narrowed* to the caller's rooms (a stranger with a valid badge sees `[]`, not everyone's data).
 - A "lighthouse" set of tests proves **both kitchens decide the same thing** for a badged caller (the *third* wall of parity, after the error contract and the badge).
+
+### Next up (Days 12-13): **Razorpay — the tip jar at the counter**
+
+- So far the restaurant takes food for *free*. Now it takes **real money**: a **paid plan** you can *buy*.
+- Next: a **Razorpay checkout** (a *tip jar* at the counter) in **three steps** — *create an order* → *take the payment* → *check the signature* that "that receipt was really signed by Razorpay."
+- It joins the **fifth** doorless wall (after the cellar, the badge, and the key): the **Razorpay SDK is mocked** inside the robot, so checkout is *decisions-tested* with **zero services** — the live money round-trip is a *later* day.
 
 ### After that (the horizon)
 
@@ -232,6 +240,7 @@ Every day I write a **note** (what I learned, start → finish) and it lives in 
 | 6 | [`day-06-aws-deploy`](docs/notes/day-06-aws-deploy-2026-09-11-1718.md) | The *real* restaurant, **live on the internet**, with instant "save → see it" |
 | 7 | [`day-07-ci`](docs/notes/day-07-ci-2026-09-15-1151.md) | A homework-checking robot that runs tests on *every push* — for **free** |
 | 8 | [`day-08-auth0-badge-reader`](docs/notes/day-08-auth0-badge-reader-2026-09-21-1710.md) | A security **door** that verifies *who you are* with an official badge |
+| 10-11 | [`day-10-workspace-ownership-rbac`](docs/notes/day-10-workspace-ownership-rbac-2026-09-29-1552.md) | A badge (JWT) says *who* you are; a **roster** (`workspace_members`) says *what you may do* — and *lists* are **narrowed to yours**, not just gated |
 
 > Each note answers three questions: **what I knew at the start of the day**, **what I learned during it**, and **what I knew at the end** (plus the debt I *named on purpose*). That's the full "knowledge gained" you asked for, day by day.
 
@@ -254,7 +263,7 @@ tech-foundry/
 └─ docs/                        ← 📓 THE FOUNDRY DOSSIER (the durable, compounding artifact)
    ├─ notes/                    ← 📒 my daily diary (the Learning Ledger)
    ├─ prompts/                  ← 🗒 each day's kickoff brief
-   ├─ adrs/                     ← 🧠 my decisions + their *why* (001–011)
+   ├─ adrs/                     ← 🧠 my decisions + their *why* (001–012)
    ├─ roadmaps/                 ← 🧭 v1/v2/v3/v4 — the 36-week plan incl. all 5 domain templates
    └─ scraps/                   ← 🗑 old drafts (kept for the story)
 ```
@@ -287,7 +296,7 @@ You kept asking **"why?"** and "why?" and "why?" — here are the honest, stacke
 5. **Because the *debt* is part of the craft.** Naming what I *didn't* do today (and *why*) is as important as what I did.
 6. **Because 36 weeks of small, honest, daily wins beats 1 week of heroics — and a foundry is the only shape that makes *many* such runs *compound* instead of *repeat*.**
 
-> If a future reader lands here, I hope they find **five** (at least) apps, one shared stack, eleven (at least) ADRs, and a daily ledger. **The apps prove it. The foundry is the thing.**
+> If a future reader lands here, I hope they find **five** (at least) apps, one shared stack, twelve (at least) ADRs, and a daily ledger. **The apps prove it. The foundry is the thing.**
 
 > **If you read nothing else, read the [Learning Ledger](#-the-learning-ledger--my-diary-one-per-day).** Not the apps — the ledger. App code will be stale by next month; the day-by-day of *how a mind thinks while learning* is the part that never goes out of date, and it's the reason the foundry exists.
 
@@ -296,7 +305,7 @@ You kept asking **"why?"** and "why?" and "why?" — here are the honest, stacke
 ## 📚 More of the story (click to open)
 
 - 🧭 **The 36-week plan + five domain templates** → [`docs/roadmaps/v4/master.md`](docs/roadmaps/v4/master.md) (v1 → v3 → v4; each is a phase of *Make it Work/Right/Fast*. §3 of v4 names the five apps the foundry casts: **SaaS, E-Commerce, Healthcare, Content, Analytics**)
-- 🧠 **My 12 decisions (ADR-001 → 011)** → [`docs/adrs/`](docs/adrs/) — one file per decision, each with the *why*
+- 🧠 **My 13 decisions (ADR-001 → 012)** → [`docs/adrs/`](docs/adrs/) — one file per decision, each with the *why*
 - 🗒 **How each day started** → [`docs/prompts/`](docs/prompts/) — the daily "kickoff brief" I feed my coding assistant
 
 ---
