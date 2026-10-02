@@ -80,6 +80,34 @@ class PostgresRepository {
         }))
     }
 
+    // "mine" scope (day-11 parity): projects in workspaces the caller belongs to.
+    // Doorless (sub undefined): the membership join can never match — serve all projects, like the pre-Day-10 read.
+    async findProjectsFor(sub?: string): Promise<Array<Project>> {
+        if (sub === undefined) {
+            return this.findAllProjects()
+        }
+        const db = getDb()
+        const rows = await db
+            .select({
+                id: projects.id,
+                workspace_id: projects.workspace_id,
+                name: projects.name,
+                created_at: projects.created_at
+            })
+            .from(projects)
+            .innerJoin(
+                workspaceMembers,
+                eq(workspaceMembers.workspace_id, projects.workspace_id)
+            )
+            .where(eq(workspaceMembers.user_id, sub))
+        return rows.map(r => ({
+            id: r.id,
+            workspace_id: r.workspace_id as string,
+            name: r.name,
+            created_at: r.created_at as Date
+        }))
+    }
+
     async findProjectById(id: string): Promise<Project | undefined> {
         const db = getDb()
         const rows = await db.select().from(projects).where(eq(projects.id, (id)))
@@ -142,6 +170,40 @@ class PostgresRepository {
     async findAllIssues(): Promise<Array<Issue>> {
         const db = getDb()
         const rows = await db.select().from(issues);
+        return rows.map(r => ({
+            id: r.id,
+            project_id: r.project_id as string,
+            title: r.title,
+            status: r.status as "open" | "closed",
+            created_at: r.created_at as Date
+        }))
+    }
+
+    // "mine" scope (day-11 parity): issues in projects in workspaces the caller belongs to.
+    // Doorless (sub undefined): the membership join can never match — serve all issues, like the pre-Day-10 read.
+    async findIssuesFor(sub?: string): Promise<Array<Issue>> {
+        if (sub === undefined) {
+            return this.findAllIssues()
+        }
+        const db = getDb()
+        const rows = await db
+            .select({
+                id: issues.id,
+                project_id: issues.project_id,
+                title: issues.title,
+                status: issues.status,
+                created_at: issues.created_at
+            })
+            .from(issues)
+            .innerJoin(
+                projects,
+                eq(projects.id, issues.project_id)
+            )
+            .innerJoin(
+                workspaceMembers,
+                eq(workspaceMembers.workspace_id, projects.workspace_id)
+            )
+            .where(eq(workspaceMembers.user_id, sub))
         return rows.map(r => ({
             id: r.id,
             project_id: r.project_id as string,

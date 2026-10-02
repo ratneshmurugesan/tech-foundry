@@ -257,8 +257,9 @@ app.get("/projects", {
         }
     }
 }, async (request, response) => {
+    const sub = request.user?.sub
     try {
-        const data = await repo.findAllProjects()
+        const data = await repo.findProjectsFor(sub)
         return response.code(200).send(data)
     } catch (dbError) {
         throw new DatabaseCrashError(dbError)
@@ -436,8 +437,9 @@ app.get("/issues", {
         }
     }
 }, async (request, response) => {
+    const sub = request.user?.sub
     try {
-        const data = await repo.findAllIssues()
+        const data = await repo.findIssuesFor(sub)
         return response.code(200).send(data)
     } catch (dbError) {
         throw new DatabaseCrashError(dbError)
