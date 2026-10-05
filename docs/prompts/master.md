@@ -71,6 +71,8 @@ ADRs live separately in `tech-foundry/docs/adrs/` and are referenced by number (
 
 17. **Touch the top-level `README.md` exactly once at day-close — from a checklist, never mid-day.** The README is a *public summary* of what already lives in `docs/notes/` + `docs/adrs/` + `apps/`; it never holds fresh detail, and it is not where today gets "written up" — the day writes itself in the note + ADR. At day-close, apply only the standing touchpoints in `roadmaps/v4/master.md` §17 (Journey Map status flip, the dates caption, an ADR row when one lands, a Learning Ledger row for a durable lesson, the one-line "up next" swap, an app card at a boundary) — and if none applies today, a no-change README is a *valid* outcome (a diary is allowed gaps). Edit in place; keep heading slugs and the `-->` chain identical so links and Mermaid survive. After editing, verify the §17 invariants: **0 U+FE0F** (GitHub's Mermaid breaks on it — the Day 8 lesson), balanced ` ``` ` fences, every in-page `#` link resolves, tables intact. A `README.md` diff belongs in the day's closeout commit alongside the note + ADR + Day N+1 prompt.
 
+18. **Dual-day scope & verification (ADR-101, the 1xx process series).** A session ships **≤ 2 shippable features** (a *hard* WIP cap — a *feature* = one decision, both kitchens, each with its test; the roadmap's next row is a *later day*). **Parity is proven by a shared golden-fixture test**, not by reading one kitchen into the other. **Any security change carries a budgeted `doorless tax:` line** (the un-CI-able 403s, per ADR-012). Routine days close with an **ADR-lite** (`TEMPLATE.md`). *Supersedes the prior "1 feature per dual day" DoD.*
+
 ---
 
 ## Usage

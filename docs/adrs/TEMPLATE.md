@@ -75,6 +75,25 @@ Same facts, same commands, same terms — but now there's a picture to hang the 
 
 ---
 
+## ADR-lite template — routine dual-track learning days (per ADR-101)
+
+**Two templates, chosen by the rarity of the call.** **`0xx` = technical** uses the *full* template below. **`1xx` = process** (how we work) and *routine* learning days use **ADR-lite** (~12 lines). Reserve the full template for a *rare, contested, safety-adjacent* decision (the ADR-012 shape). The Writing Standard (story-first, ≤ 2 lines/bullet) applies to both; ADR-lite is *short on purpose* — the day-note carries *how it went*, ADR-lite carries *the one decision + its bar*.
+
+```markdown
+# ADR-###: [The decision — one sentence]
+
+**Status**: Active · **Date**: YYYY-MM-DD · **Deciders**: user + AI · **Supersedes**: (link, if any)
+
+## Picture      ← 2-3 lines, the story (story-first)
+## Decision     ← the change, ≤ 5 lines
+## The bar      ← ≤ 3 lines; the *test* that proves it, doorless where it bites
+## Two kitchens ← TS ↔ PY shape, ≤ 2 lines (skip if single-track)
+## OSS pull     ← ≤ 3 lines, what it learned from (or rejected, and why)
+## Cut & debt   ← the cut you made + the debt you parked (name the day), ≤ 3 lines
+```
+
+---
+
 ## Template
 
 Copy the block below as `adr-NNN-short-title.md`:
