@@ -11,7 +11,7 @@
 ## NOW
 *(derived on every run — never hand-edited)*
 - last: day-13 (2026-10-03 — docs-v2-home) → notes/day-13-docs-v2-home-2026-10-03-2130.md
-- git: dev-v2-oct-5-2026 · HEAD 28f4c84 feat(docs): introduce ADR-lite template and update dual-day scope verification in master prompt · 12 uncommitted path(s)
+- git: dev-v2-oct-5-2026 · HEAD b41129f feat(docs): establish v2 documentation structure with debt ledger, llms generator, and session pointers · 1 uncommitted path(s)
 - open debts: 11a · 11b · 11c · 12a→12e · 14a → debt.md (triggers, not dates)
 - next: Razorpay checkout — Next — create order → verify payment, both tracks, under the v2 regime. Precondition 11a/11b/11c (TS workspaces / plan_tier / role column) are open in docs_v2/debt.md. The plan is docs/prompts/day-12-razorpay-checkout-plans-.md; the ledger is the debt row. The v4 slot said "Day 12-13" and day-13 was docs — the slot is re-sequenced; this row is the day, per ADR-013 rule 1 (no dates in debt). … → roadmap §16 (../docs/roadmaps/v4/master.md)
 
