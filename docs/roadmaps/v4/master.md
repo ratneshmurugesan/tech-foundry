@@ -759,21 +759,16 @@ We move on: Next deepening
 
 ## 16. Current Status & Next Steps
 
-### Where We Are (last updated 2026-09-25, through Day 8-9):
-- ✅ 12 OSS repos analyzed (Ghost, Plane, Zulip, Storybook, Playwright, Mermaid, Discourse, Puppeteer, OpenHands, Hoppscotch, Streamlit, Lighthouse)
-- ✅ 7 universal patterns extracted
-- ✅ 36-week compressed roadmap with build sprints + deepening passes
-- ✅ 5 domain templates with DDD patterns (SaaS first)
-- ✅ Taskflow project defined (Linear clone)
-- ✅ Build Sprint 1 day-by-day plan (14 days, microscopic)
-- ✅ Business psychology framework
-- ✅ Learning process: "Ship, Break, Fix, Repeat"
-- ✅ OSS reference map (which repo to look at, when)
+### Where We Are (last updated 2026-10-03, through Day 13 — v2 era opened):
+- ✅ v1 era complete: dual-language API, Postgres, deploy, CI, Auth0 door, workspace RBAC (`docs/` notes/adrs — v1-era history)
+- ✅ Dual-day feature parity established (ADR-101): 33 cases in the golden matrix — the shared source of truth
+- ✅ **v2 docs regime live** (ADR-013, day-13): `docs_v2/` = `debt.md` (one row per debt, no dates) + `llms.txt` (generated) + the 5-step EOD; the 2026-09-13/30 throwaway rehearsals deleted
+- ✅ Build Sprint 1 plan (14 days) still valid underneath: ~11 of 14 days landed
 
 ### What's Next:
-1. **Day 8-9** — Auth: badge reader validates the Auth0 ID token, both tracks (done — `notes/day-08-auth0-badge-reader-*.md` + ADR-011); live URL now returns 401 until a valid `Authorization: Bearer <Access Token>` is sent.
-2. **Day 10-11** — Workspace ownership + RBAC: the doorman who checks the badge *and* the lease (Owner/Viewer), per ADR-007's 403-with-`code` contract. (Prompt: `docs/prompts/day-10-workspace-ownership-rbac-*.md`.)
-3. **Day 12-13** — Razorpay checkout (create order → verify payment).
+1. **Razorpay checkout — `Next`** — create order → verify payment, both tracks, under the v2 regime. Precondition 11a/11b/11c (TS `workspaces` / `plan_tier` / role column) are `open` in `docs_v2/debt.md`. The *plan* is `docs/prompts/day-12-razorpay-checkout-plans-*.md`; the *ledger* is the debt row. The v4 slot said "Day 12-13" and day-13 was docs — the slot is re-sequenced; this row is the day, per ADR-013 rule 1 (no dates in debt).
+2. **Day 14** — the 14th Build-Sprint-1 day under the v2 regime (deep per the plan).
+3. Un-claimed small: 14a's README live-URL banner (`docs_v2/debt.md` row), owed to the next README touch.
 
 ---
 

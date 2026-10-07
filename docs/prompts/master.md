@@ -86,7 +86,7 @@ The AI will:
 1. Load this prompt (rules)
 2. Load the roadmap (context, phase, sprint, day definition)
 3. Check all notes in order in tech-foundry/docs/notes/ to understand whats done and what day is next. compare previous day's preview of next day section to find a conenction between subsequent notes .
-4. Generate the complete day breakdown following all 17 rules
+4. Generate the complete day breakdown following all 18 rules
 5. After execution, generate the notes file at `tech-foundry/docs/notes/`
 6. Apply the **README touchpoints** (Rule 17) to the top-level `README.md` from the §17 checklist — only where today's work touched a standing summary; if none applies, the README simply does not change today (write that into the note's footer).
 7. Day-close final step (before the closeout commit): draft **Day N+1's prompt file** at `tech-foundry/docs/prompts/day-XX-[slug]-[yyyy-mm-dd-hhmm].md`, built from the notes file's "Preview of Next Day" section + the roadmap's next row. It points back at this file (master) and carries the day-specific constraints (options to settle, ADR candidates, deliverables bar, next-day preview). Day notes + ADR (+ any README diff) + next prompt file are committed together in one closeout commit, so no session ends leaving the next day without its kickoff file — and the README never silently rots.
