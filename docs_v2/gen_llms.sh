@@ -8,7 +8,7 @@
 #
 # Design: the ONLY hand-maintained content is the SUMMARY + DOCMAP + LEGACY
 # blocks below (free text in THIS script, never in llms.txt). Everything under
-# "ADRs / Day notes / Day prompts" is derived from filenames and Status lines —
+# "ADRs / Day notes" is derived from filenames and Status lines —
 # never hand-written, hence never fabricatable. The hand-written llms.txt of
 # 2026-09-21 (a ULID summary for a uuid4 ADR, a link to a file that did not
 # exist) is what this file replaced.
@@ -31,7 +31,7 @@ OUT="${2:-$HERE/llms.txt}"
 > Docs carry WHY / DECIDED / NEXT-OWED-TO / DEBT; the code is the WHAT.
 >
 > **Read order:** `README.md` (below) → `../docs/prompts/master.md` (the 18 rules)
-> → the current day prompt + its ADR + the latest note → then *code*.
+> → the latest note + its ADR + the roadmap's Next row → then *code*.
 SUMMARY
   echo
 
@@ -64,31 +64,23 @@ SUMMARY
   else
     echo "- open debts: none"
   fi
-  nextp=$(ls "$DOCS"/prompts/day-*.md 2>/dev/null | sort | tail -1)
-  if [ -n "$nextp" ]; then
-    b=$(basename "$nextp" .md)
-    nnum=$(printf '%s' "$b" | sed -E 's/^day-([0-9]+)-.*/\1/')
-    nlab=$(printf '%s' "$b" | sed -E 's/^day-[0-9]+-//; s/-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$//')
-    ndte=$(printf '%s' "$b" | sed -E 's/^(.*)-([0-9]{4}-[0-9]{2}-[0-9]{2})-[0-9]{4}$/\2/')
-    echo "- next: day-$nnum prompt ($ndte — $nlab) → prompts/$b.md"
+  # The "next" always derives from the roadmap's §16 Next row (EOD step 4 keeps it
+  # alive every day). v2 drafts no day+1 prompt file, so there is no
+  # "prompt file" branch — the old fallback path is now the only path. Copy the row's
+  # *own words* — a pointer, never a re-derivation (ADR-013 rule 2); if the section
+  # moved and nothing parses, degrade to a bare pointer.
+  nextrow=$(awk '/^## 16\./ { f = 1; next } f && /^## [0-9]/ { exit } f && /^[0-9]+\. / { sub(/^[0-9]+\. */, ""); gsub(/\*/, ""); gsub(/`/, ""); print; exit }' "$DOCS/../docs/roadmaps/v4/master.md" 2>/dev/null | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+  if [ -n "$nextrow" ]; then
+    echo "- next: $nextrow … → roadmap §16 (../docs/roadmaps/v4/master.md)"
   else
-    # Tier 2 — no v2-era day prompt on file, so point at the roadmap's Next row
-    # (EOD step 4 keeps it alive every day). Copy the row's *own words* — a pointer
-    # that is a copy, never a re-derivation (ADR-013 rule 2); if the section moved
-    # and nothing parses, degrade to a bare pointer. This replaced the 10-06
-    # "none drafted yet — derive the day" dead end (the 5th re-derivation audit).
-    nextrow=$(awk '/^## 16\./ { f = 1; next } f && /^## [0-9]/ { exit } f && /^[0-9]+\. / { sub(/^[0-9]+\. */, ""); gsub(/\*/, ""); gsub(/`/, ""); print; exit }' "$DOCS/../docs/roadmaps/v4/master.md" 2>/dev/null | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
-    if [ -n "$nextrow" ]; then
-      echo "- next: $nextrow … → roadmap §16 (../docs/roadmaps/v4/master.md)"
-    else
-      echo "- next: → roadmap 'Current Status & Next' (../docs/roadmaps/v4/master.md) — its first numbered row is the day"
-    fi
+    echo "- next: → roadmap 'Current Status & Next' (../docs/roadmaps/v4/master.md) — its first numbered row is the day"
   fi
   echo
 
   cat <<'DOCMAP'
 ## Docs map (everything in this tree)
 - [README](README.md): what lives where + the EOD procedure
+- [daily-flow](daily-flow.md): your daily operating sheet — the full cycle (kickoff → work → closeout) in one file
 - [debt](debt.md): *the* debt ledger — one row per debt; grep this to see what's open
 - [roadmap](../docs/roadmaps/v4/master.md): the single living roadmap — one line per day; *grep for NEXT*
 - [AGENTS.md](../AGENTS.md): the session-start pointer (rules 1/4) — a new agent session reads this first
@@ -133,18 +125,6 @@ DOCMAP
     found=1
   done
   [ "$found" = 1 ] || echo "- (none yet)"
-  echo
-
-  echo "## Day prompts (newest first)"
-  for f in "$DOCS"/prompts/day-*.md; do
-    [ -f "$f" ] || continue
-    b=$(basename "$f" .md)
-    date=$(printf '%s' "$b" | sed -E 's/^(.*)-([0-9]{4}-[0-9]{2}-[0-9]{2})-[0-9]{4}$/\2/')
-    label=$(printf '%s' "$b" | sed -E 's/-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}$//')
-    printf '%s|%s|%s\n' "$date" "$label" "$b"
-  done | sort -t'|' -r | while IFS='|' read -r d l b; do
-    echo "- [$l](prompts/$b.md): *planned $d*"
-  done
   echo
 
   cat <<'LEGACY'
