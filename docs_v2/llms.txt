@@ -11,7 +11,7 @@
 ## NOW
 *(derived on every run — never hand-edited)*
 - last: day-14 (2026-10-09 — razorpay-checkout) → notes/day-14-razorpay-checkout-2026-10-09-1708.md
-- git: day-14-razorpay-checkout · HEAD 20f28d3 refactor(docs_v2): llms generation and documentation structure · 12 uncommitted path(s)
+- git: day-14-razorpay-checkout · HEAD 45d79a1 docs: close 11a/11b/11c, unblock razorpay checkout; harden llms open-debts matcher · 1 uncommitted path(s)
 - open debts: 12a→12e · 14a → debt.md (triggers, not dates)
 - next: Razorpay checkout — Next — create order → verify payment, both tracks, under the v2 regime. All three preconditions (11a/11b/11c) are now done in docs_v2/debt.md — the checkout is unblocked. The plan is docs/prompts/day-12-razorpay-checkout-plans-.md; the ledger is the debt row. The v4 slot said "Day 12-13" and day-13 was docs — the slot is re-sequenced; this row is the day, per ADR-013 rule 1 (no dates in debt). … → roadmap §16 (../docs/roadmaps/v4/master.md)
 
