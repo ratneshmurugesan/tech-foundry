@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 export const workspaces = pgTable("workspaces", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    plan_tier: text("plan_tier").notNull().default("free"),
     created_at: timestamp("created_at", { mode: "date" }).defaultNow()
 })
 

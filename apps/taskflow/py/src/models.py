@@ -10,6 +10,7 @@ class WorkspaceModel(Base):
 
     id = Column(String(36), primary_key=True)
     name = Column(String, nullable=False)
+    plan_tier = Column(String, nullable=False, server_default=text("'free'"))
     created_at = Column(DateTime, server_default=text("now()"))
 
 class ProjectModel(Base):

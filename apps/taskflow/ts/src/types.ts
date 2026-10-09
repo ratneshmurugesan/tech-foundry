@@ -1,6 +1,7 @@
 export interface Workspace {
     id: string;
     name: string;
+    plan_tier: string;
     created_at: Date | null;
 }
 

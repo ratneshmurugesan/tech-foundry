@@ -12,6 +12,7 @@ class PostgresRepository {
         return rows.map(r => ({
             id: r.id,
             name: r.name,
+            plan_tier: r.plan_tier as string,
             created_at: r.created_at as Date
         }))
     }
@@ -24,6 +25,7 @@ class PostgresRepository {
         return {
             id: row.id,
             name: row.name,
+            plan_tier: row.plan_tier as string,
             created_at: row.created_at as Date
         }
     }
@@ -40,6 +42,7 @@ class PostgresRepository {
         return {
             id: rows[0].id,
             name: rows[0].name,
+            plan_tier: rows[0].plan_tier as string,
             created_at: rows[0].created_at as Date
         }
     }
@@ -281,6 +284,7 @@ class PostgresRepository {
             .select({
                 id: workspaces.id,
                 name: workspaces.name,
+                plan_tier: workspaces.plan_tier,
                 created_at: workspaces.created_at,
             })
             .from(workspaces)
@@ -305,6 +309,7 @@ class PostgresRepository {
             .select({
                 id: workspaces.id,
                 name: workspaces.name,
+                plan_tier: workspaces.plan_tier,
                 created_at: workspaces.created_at,
             })
             .from(workspaces)

@@ -11,6 +11,7 @@ __all__ = ["Workspace", "CreateWorkspace", "UpdateWorkspace",
 class Workspace(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str = Field(min_length=3)
+    plan_tier: str = Field(default="free")
     created_at: datetime = Field(default_factory=datetime.now)
 
     model_config = ConfigDict(from_attributes=True)  # This enables Workspace.model_validate(sqlalchemy_row) — the bridge between SQLAlchemy models and Pydantic API types.

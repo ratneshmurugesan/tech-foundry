@@ -1,5 +1,18 @@
 import { describe, expect, test } from "vitest";
 import  { createWorkspaceSchema, createIssueSchema, idParamSchema } from "../src/server";
+import type { Workspace } from "../src/types";
+
+describe("Workspace type shape (golden-matrix parity, ADR-001)", () => {
+  test("plan_tier is part of the Workspace interface and defaults to 'free'", () => {
+    const ws: Workspace = { id: "w-1", name: "Acme", plan_tier: "free", created_at: new Date() };
+    expect(ws.plan_tier).toBe("free");
+  });
+
+  test("plan_tier accepts 'starter' (the paid tier)", () => {
+    const ws: Workspace = { id: "w-1", name: "Acme", plan_tier: "starter", created_at: new Date() };
+    expect(ws.plan_tier).toBe("starter");
+  });
+});
 
 describe("Workspace Schema Validation", () => {
   test("valid workspace passes validation successfully", () => {
