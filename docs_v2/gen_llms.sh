@@ -86,6 +86,8 @@ SUMMARY
 - [README](README.md): what lives where + the EOD procedure
 - [daily-flow](daily-flow.md): your daily operating sheet — the full cycle (kickoff → work → closeout) in one file
 - [debt](debt.md): *the* debt ledger — one row per debt; grep this to see what's open
+- [product/taskflow-product](product/taskflow-product.md): the TaskFlow **spec** — what it is, who it's for, why it feels good (stable; no "next")
+- [product/taskflow-build](product/taskflow-build.md): the TaskFlow **build ledger** — how we build + prove it's right (*this* drives the roadmap)
 - [roadmap](../docs/roadmaps/v4/master.md): the single living roadmap — one line per day; *grep for NEXT*
 - [AGENTS.md](../AGENTS.md): the session-start pointer (rules 1/4) — a new agent session reads this first
 DOCMAP
