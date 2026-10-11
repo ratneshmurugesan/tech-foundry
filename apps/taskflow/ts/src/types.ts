@@ -2,7 +2,7 @@ export interface Workspace {
     id: string;
     name: string;
     plan_tier: string;
-    created_at: Date | null;
+    created_at: Date;
 }
 
 export interface CreateWorkspace {
@@ -18,7 +18,7 @@ export interface Project {
     id: string;
     name: string;
     workspace_id: string;
-    created_at: Date | null;
+    created_at: Date;
 }
 
 export interface CreateProject {
@@ -37,7 +37,7 @@ export interface Issue {
     project_id: string;
     title: string;
     status: "open" | "closed";
-    created_at: Date | null;
+    created_at: Date;
 }
 
 export interface CreateIssue {
@@ -59,7 +59,7 @@ export interface WorkspaceMember {
     workspace_id: string;
     user_id: string;
     role: "owner" | "member"
-    created_at: Date | null;
+    created_at: Date;
 }
 
 // The role ladder (day-10): a numeric rank so "allows at least min_role" is a *compare*, not equality.

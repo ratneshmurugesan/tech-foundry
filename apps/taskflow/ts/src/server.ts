@@ -24,31 +24,48 @@ const app = fastify
 // Registering custom semantic error handler
 registerErrorHandler(app)
 
+// --- Response schemas: the WIRE contract. The field SET + ORDER must match the PY kitchen
+//     byte-for-byte (the parity wall, ADR-001). `created_at` / `plan_tier` were added here
+//     2026-10-10 to close the known wire-level gap (build ledger §4 callout): these schemas
+//     predate those columns, and setSerializerCompiler was silently stripping them — so the
+//     two kitchens returned different JSON for every resource.
 const workspaceSchema = z.object({
     id: z.uuid(),
-    name: z.string().min(3)
+    name: z.string().min(3),
+    // `z.string()` on purpose — the PY kitchen's Workspace.plan_tier is a plain `str` (not a
+    // Literal), so the parity-faithful TS is a plain string too. The plan state machine (11b)
+    // is what constrains it to free/starter at runtime, in both kitchens.
+    plan_tier: z.string(),
+    created_at: z.date(),
 })
-const createWorkspaceSchema = workspaceSchema.omit({ id: true })
+// Request schemas pick ONLY the user-settable fields — `plan_tier` and `created_at` are
+// system-managed (the plan state machine / the DB clock set them), never client-settable.
+const createWorkspaceSchema = workspaceSchema.pick({ name: true })
 const updateWorkspaceSchema = createWorkspaceSchema.partial()
 const idParamSchema = z.object({ id: z.uuid() });
 
 const projectSchema = z.object({
     id: z.uuid(),
     name: z.string().min(3),
+    created_at: z.date(),
     workspace_id: z.uuid()
 })
-const createProjectSchema = projectSchema.omit({ id: true })
+const createProjectSchema = projectSchema.pick({ name: true, workspace_id: true })
 const updateProjectSchema = createProjectSchema.partial()
 
 const issueSchema = z.object({
     id: z.uuid(),
-    title: z.string().min(3),
     project_id: z.uuid(),
+    title: z.string().min(3),
     status: z.enum(["open", "closed"]),
+    created_at: z.date(),
 })
-const createIssueSchema = issueSchema.omit({ id: true }).extend({ status: z.enum(["open", "closed"]).optional().default("open") })
+const createIssueSchema = issueSchema.pick({ project_id: true, title: true }).extend({ status: z.enum(["open", "closed"]).optional().default("open") })
 const updateIssueSchema = createIssueSchema.partial()
 
+// `workspaceMemberSchema` deliberately has NO `created_at`: the PY kitchen's WorkspaceMember
+// pydantic model omits it too, so both kitchens already agree on the wire (id, workspace_id,
+// user_id, role). Adding it here would *break* parity, not fix it.
 const workspaceMemberSchema = z.object({
     id: z.uuid(),
     workspace_id: z.uuid(),
@@ -594,6 +611,12 @@ export async function startServer(port: number) {
 
 export {
     app,
+    // Response schemas — exported so the golden matrix (tests/types.test.ts) can assert the
+    // serialized wire shape, not just the type definitions.
+    workspaceSchema,
+    projectSchema,
+    issueSchema,
+    workspaceMemberSchema,
     createWorkspaceSchema,
     createProjectSchema,
     createIssueSchema,

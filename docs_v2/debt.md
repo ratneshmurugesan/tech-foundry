@@ -18,6 +18,7 @@
 | **12a→12e** — razorpay checkout (TS 12a/12c/12d + py 12b/12e; env, keyring, golden 15 cases, docs) | day-12 prompt (2026-10-01) | day-12 never happened; all three preconditions (11a/11b/11c) now closed — the checkout is unblocked | the roadmap's razorpay row (v4 plan said day-12–13; re-sequenced — the roadmap will say where) | `claimed` — the day-12 prompt is the *plan*; this is the *ledger* |
 | **14a** — the ADR-008 live-URL banner for the README | day-8 (Auth0) | day was the door, not the docs | the next README EOD touch | `open` — one line, still unclaimed |
 | **14b** — the ADR-011 live-URL banner for the README | day-8 (Auth0) | day was the door, not the docs | — | `dropped` — ADR-011 is superseded by ADR-012's door (both banners collapse into one) |
+| **15a** — the golden-matrix wire-parity gap (the TS zod response schemas trailed the pydantic models; the matrix never exercised the serializer) | day-14 closeout (build ledger §4 callout) | scope bleed (the day was razorpay checkout) | the next parity / CI touch | `done` — fixed 2026-10-10: `workspaceSchema` + `plan_tier`/`created_at`, `projectSchema` + `issueSchema` + `created_at` (PY key order); `workspaceMemberSchema` left untouched (the PY member model has no `created_at` — already at parity); the golden matrix now asserts the serialized wire shape in both tracks |
 
 
 **Format for every new row** (one line, no more): `**id** — what | deferred-on (day+ADR) | why (one clause) | owed-to (a roadmap *row* or a trigger — never a date) | status`.

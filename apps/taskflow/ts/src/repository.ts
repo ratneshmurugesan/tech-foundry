@@ -56,7 +56,7 @@ class PostgresRepository {
             .where(eq(workspaces.id, id))
             .returning();
 
-        return row[0] ?? undefined
+        return (row[0] as Workspace) ?? undefined
     }
 
     async deleteWorkspace(id: string): Promise<boolean> {
@@ -244,7 +244,7 @@ class PostgresRepository {
             project_id: rows[0].project_id as string,
             title: rows[0].title,
             status: rows[0].status as "open" | "closed",
-            created_at: rows[0].created_at
+            created_at: rows[0].created_at as Date
         }
     }
 
@@ -263,7 +263,7 @@ class PostgresRepository {
                 project_id: rows[0].project_id as string,
                 title: rows[0].title,
                 status: rows[0].status as "open" | "closed",
-                created_at: rows[0].created_at
+                created_at: rows[0].created_at as Date
             } : undefined
     }
 
@@ -300,7 +300,7 @@ class PostgresRepository {
             )
             .limit(1)
 
-        return rows[0]
+        return rows[0] as Workspace
     }
 
     async findWorkspacesFor(userId: string): Promise<Workspace[]>{
@@ -318,7 +318,7 @@ class PostgresRepository {
                 eq(workspaceMembers.workspace_id, workspaces.id)
             )
             .where(eq(workspaceMembers.user_id, userId))
-        return rows
+        return rows as Workspace[]
     }
 
     async findMembership(workspaceId: string, sub: string): Promise<WorkspaceMember | undefined> {
@@ -332,7 +332,7 @@ class PostgresRepository {
                     eq(workspaceMembers.user_id, (sub)))
             )
         return membershipRows.length
-            ? membershipRows[0]
+            ? membershipRows[0] as WorkspaceMember
             : undefined
     }
 

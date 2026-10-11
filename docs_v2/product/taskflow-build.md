@@ -102,13 +102,13 @@ Fixed strings, identical on both kitchens. This is a *contract* — a client can
 
 The thing that makes TaskFlow *the foundry's proving ground* rather than just another CRUD app.
 
-- **Two kitchens, one dish (ADR-001).** Python/FastAPI (`py/`) and TypeScript/Fastify+Hono (`ts/`) implement the *same* routes, *same* error strings, and — *intended* — the *same* response shapes. **Never** share code across the kitchens. (One known wire-level gap: see the callout below.)
+- **Two kitchens, one dish (ADR-001).** Python/FastAPI (`py/`) and TypeScript/Fastify+Hono (`ts/`) implement the *same* routes, *same* error strings, and — *intended* — the *same* response shapes. **Never** share code across the kitchens. (The one known wire-level gap is now closed — see the callout below.)
 - **The golden matrix is the source of truth for parity.** A shared fixture (same request → same response JSON) that **both** tracks assert. A drift turns the fast suite **red** — parity is *tested*, not *re-read*.
 - **The cellar** (ADR-005, ADR-008): Postgres, via SQLAlchemy (PY) / Drizzle (TS). Doorless by default; the dead-cellar 500 is the contract.
 - **CI ships cellar-less and key-less** (ADR-010): the *payable* and *auth* tests are the **pure** shape only (state machine, signature verify, role ladder) — no live Razorpay, no live JWKS, no Postgres in CI.
 - **Deploy**: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build` on a $0 Free-Tier VM (the live record is an AWS `a1`-class box, `us-east-1`).
 
-> **⚠️ Known parity gap (found while writing this doc, 2026-10-09).** The *type-layer* golden matrix is green on both kitchens, but the *wire* layer has drifted and the matrix does not exercise it. The Python kitchen serializes its full pydantic models (a workspace → `{ id, name, plan_tier, created_at }`); the TypeScript kitchen serializes through **zod response schemas** written before `created_at` / `plan_tier` existed and never updated — `workspaceSchema` is `{ id, name }`, and `projectSchema` / `issueSchema` / `workspaceMemberSchema` all omit `created_at`. Because the app sets `setSerializerCompiler`, Fastify **strips** those fields, so the two kitchens return **different JSON** for every resource. This breaks the "byte-identical / 8000 == 8001" claim at the wire layer and is **silent in CI** (the golden matrix asserts the type *definitions*, which still agree — not the zod *serializer*). The fix is small (add `created_at` to the four zod schemas, `plan_tier` to `workspaceSchema`) but it touches the parity wall, so it is logged here and belongs in the debt ledger — until it lands, the kitchens are *type*-identical, not *wire*-identical.
+> **✅ Wire-level parity — closed 2026-10-10 (debt 15a).** The *type-layer* golden matrix was green on both kitchens, but the *wire* layer had drifted and the matrix did not exercise it: the TypeScript kitchen serialized through **zod response schemas** written before `created_at` / `plan_tier` existed and never updated, and because the app sets `setSerializerCompiler`, Fastify **stripped** those fields — so the two kitchens returned **different JSON** for the same resource, **silent in CI** (the matrix asserted the type *definitions*, which still agreed, not the zod *serializer*). **The fix:** `workspaceSchema` gained `plan_tier` + `created_at`, and `projectSchema` / `issueSchema` gained `created_at` — all in the PY kitchen's key order, so the two kitchens now emit byte-identical JSON. **One correction to the original framing:** `workspaceMemberSchema` was **not** in the gap — the PY `WorkspaceMember` pydantic model has no `created_at` either, so both kitchens already agreed on the member (`{ id, workspace_id, user_id, role }`); adding it would have *broken* parity, so it is left untouched. The golden matrix (`py/tests/test_types.py` + `ts/tests/types.test.ts`) now asserts the *serialized* wire shape (ordered key set + enums) in both tracks, so a serializer drift turns the fast suite red. The kitchens are now *wire*-identical, not just *type*-identical.
 
 ```mermaid
 flowchart LR
@@ -129,7 +129,7 @@ flowchart LR
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-10-09)
+## 5. What's built vs. what's next (honest state, 2026-10-10)
 
 | Capability | State |
 |---|---|
@@ -137,7 +137,7 @@ flowchart LR
 | Auth0 door (badge reader, six 401s, fail-closed) | ✅ shipped |
 | RBAC key-ring (owner/member ladder, two 403s) | ✅ shipped |
 | Multi-tenant scoping (see only your own) | ✅ shipped, golden-matrix guarded |
-| **Wire-level response parity** (identical JSON, both kitchens) | ⚠️ gap — TS zod schemas drop `created_at` (and `plan_tier` on workspace); silent in CI (see §4 callout) |
+| **Wire-level response parity** (identical JSON, both kitchens) | ✅ **closed 2026-10-10** — the three trailing zod schemas now match the PY key order; the member was already at parity; the golden matrix asserts the serialized shape in both tracks (debt 15a) |
 | Plan tier column (`free`/`starter`) | ✅ shipped (data only) |
 | **Plan tier → role capability** (free=read-only, paid=write) | ⏳ next (the day-10 contract) |
 | **Plan state machine** (trial→active→past_due→canceled) | ⏳ next (pure, testable) |
@@ -154,4 +154,4 @@ flowchart LR
 2. **Razorpay key**: does a key exist in any env you control? (The foundry does *not* create Razorpay accounts — that's your call.)
 3. **Tier semantics**: is `starter` the only paid tier, or the first of a ladder? (Affects whether `plan_tier` is an enum or a rank.)
 4. **Home of the spec**: resolved 2026-10-10 — the PRD was split into this file (`taskflow-build.md`, the ledger) and `taskflow-product.md` (the spec), both under `docs_v2/product/`. `docs/` is read-only v1 history, so `docs_v2/` is the home.
-5. **The wire-level parity gap** (§4 callout): fix the TS zod response schemas now (add `created_at` to all four, `plan_tier` to `workspaceSchema`) and extend the golden matrix to assert the *serialized* response — or is the matrix meant to stay type-layer-only and the wire gap tracked purely in the debt ledger?
+5. ~~**The wire-level parity gap**~~ — **resolved 2026-10-10 (debt 15a).** The three trailing zod response schemas (`workspace` + `plan_tier`/`created_at`, `project` + `created_at`, `issue` + `created_at`) now match the PY kitchen's key order; `workspaceMemberSchema` was left untouched (the PY member model has no `created_at`, so it was already at parity — the original "all four" framing over-counted). The golden matrix (`py/tests/test_types.py` + `ts/tests/types.test.ts`) now asserts the *serialized* wire shape in both tracks, so a serializer drift turns the fast suite red.
