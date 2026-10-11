@@ -53,10 +53,14 @@ SUMMARY
   else
     echo "- last: none yet"
   fi
+  # Stable across a commit (committing never changes the branch), so the manifest
+  # stays byte-identical before and after `git add -A && commit` — no second
+  # "refresh the manifest" commit. (The old HEAD-hash + dirty-count line was
+  # volatile: it recorded pre-commit state and rotted the moment the commit
+  # landed, forcing a follow-up refresh commit. Branch is the only git fact
+  # that survives a commit of the docs themselves.)
   branch=$(git -C "$DOCS" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')
-  head1=$(git -C "$DOCS" log -1 --format='%h %s' 2>/dev/null || echo '?')
-  dirty=$(git -C "$DOCS" status --porcelain 2>/dev/null | wc -l | tr -d '[:space:]')
-  echo "- git: $branch · HEAD $head1 · $dirty uncommitted path(s)"
+  echo "- git: $branch"
   bt=$(printf '\140')    # a backtick via octal — none appears raw inside the awk program below
   # Anchor the match to the *status* word at the START of the Status column (an optional
   # backtick-wrapped word), not a substring anywhere in the cell — a done row whose prose
