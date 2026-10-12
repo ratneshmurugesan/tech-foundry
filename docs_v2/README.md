@@ -49,7 +49,9 @@ docs_v2/
 3. **Debt** — one `debt.md` row update: anything deferred *becomes* a row;
    anything claimed/closed flips status to `done (link note)` or `dropped (link ADR)`.
 4. **Roadmap** — one line in `../docs/roadmaps/v4/master.md` + its NEXT.
-5. **Manifest** — `sh gen_llms.sh`, then `git add -A` and **show the diff + propose the
+5. **Ledger** — only if a new pattern landed: move it horizon→in-use in
+   `product/taskflow/design-pattern-ledger.md` (a 30-second move; a no-op most days).
+6. **Manifest** — `sh gen_llms.sh`, then `git add -A` and **show the diff + propose the
    message**. Rule 13: the agent never commits; the commit is the human's act.
 
 No 25-step ritual. Rules 1 and 2 do the work; the procedure is just the
