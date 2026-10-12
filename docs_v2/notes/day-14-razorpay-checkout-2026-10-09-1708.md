@@ -8,7 +8,7 @@
 **Didn't build:**
 - **The checkout itself** (12a→12e — create order → verify payment; the `plan` *table* + state machine of the day-12 prompt A.4–A.6). 11b is the *column* the checkout needs; the *money* is the next piece and is still `claimed`.
 
-**Decisions:** none warrant an ADR yet — `plan_tier` is a column, not a seam. The plan *table* + state machine + the plan→role link (Decide-4) will carry **ADR-013** when the checkout lands.
+**Decisions:** none warrant an ADR yet — `plan_tier` is a column, not a seam. The plan *table* + state machine + the plan→role link (Decide-4) will carry **ADR-014** when the checkout lands. *(Corrected 2026-10-12: the day-12 prompt's "ADR-013" was v1-era numbering; ADR-013 is now the docs-v2-home decision, so the checkout ADR is 014.)*
 
 **Debt:** **11b → `done`** (this note) — the last open precondition; **12a→12e** is now unblocked. (11a/11c closed day-10/11.)
 
