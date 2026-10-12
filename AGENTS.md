@@ -7,7 +7,7 @@
 1. `docs/prompts/master.md` — the **18 standing rules** (house law, any session).
 2. `docs_v2/llms.txt` → `## NOW` — where we are *right now* (derived: last day, branch, open debts, next).
 3. `docs_v2/debt.md` — what's owed and to which *trigger* (one row per debt; never a date).
-4. `docs_v2/product/taskflow-build.md` — the app's **build ledger** (state + sequence; *this* drives the roadmap). Its companion, `taskflow-product.md`, is the stable spec (the *what/why*, no "next").
+4. `docs_v2/product/taskflow/taskflow-build.md` — the app's **build ledger** (state + sequence; *this* drives the roadmap). Its companion, `taskflow-product.md`, is the stable spec (the *what/why*, no "next").
 5. *Then* the code: `apps/taskflow/py/` (FastAPI kitchen) + `apps/taskflow/ts/` (Fastify/Hono kitchen) — **never** share code across the kitchens (the parity wall, ADR-001; the golden matrix in `py/tests/` is the parity source of truth).
 
 **The v1 plan** lives at `docs/roadmaps/v4/master.md` (§1–§15: phases, stacks, OSS map) — v1-era history; read for *plan shape* only. For *current position*, `## NOW` is authoritative (v1's §16 froze at "through Day 8-9"). `docs/` is read-only from the v2 era on (ADR-013).

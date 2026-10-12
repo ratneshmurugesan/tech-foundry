@@ -2,7 +2,7 @@
 
 > **Status**: Draft · **Date**: 2026-10-10 · **Owner**: user + AI · **App**: #1 of the foundry
 > **The ledger** — how we build it + prove it's right. *This* doc drives the roadmap (state + sequence).
-> **Companion**: `taskflow-product.md` — the *spec* (what it is, who it's for, why it feels good). Read that first for the *why*; this is the *how*.
+> **Companions**: `taskflow-product.md` — the *spec* (what it is, who it's for, why it feels good). `design-pattern-ledger.md` — the *how it's built* (which patterns are in use, why, and the swap story each buys). Read the spec first for the *why*; this is the *how* (sequence), and the ledger is the *how* (shape).
 > **Grounded in**: `apps/taskflow/py/` + `apps/taskflow/ts/` (the two kitchens), `docs_v2/debt.md` (what's owed), `docs/roadmaps/v4/master.md` §16 (current position)
 > **House rule honored**: where this doc and the code disagree, **the code wins** — then fix the doc the same day (ADR-013).
 
@@ -153,5 +153,5 @@ flowchart LR
 1. **Plan-tier coupling point**: does the tier gate *writes* at the **authorizer** (a third rank step) or at the **route** (a capability check)? The day-12 prompt leans *authorizer* (Decide-4) — confirm before building.
 2. **Razorpay key**: does a key exist in any env you control? (The foundry does *not* create Razorpay accounts — that's your call.)
 3. **Tier semantics**: is `starter` the only paid tier, or the first of a ladder? (Affects whether `plan_tier` is an enum or a rank.)
-4. **Home of the spec**: resolved 2026-10-10 — the PRD was split into this file (`taskflow-build.md`, the ledger) and `taskflow-product.md` (the spec), both under `docs_v2/product/`. `docs/` is read-only v1 history, so `docs_v2/` is the home.
+4. **Home of the spec**: resolved 2026-10-10 — the PRD was split into this file (`taskflow-build.md`, the ledger) and `taskflow-product.md` (the spec), both under `docs_v2/product/taskflow/`. `docs/` is read-only v1 history, so `docs_v2/` is the home.
 5. ~~**The wire-level parity gap**~~ — **resolved 2026-10-10 (debt 15a).** The three trailing zod response schemas (`workspace` + `plan_tier`/`created_at`, `project` + `created_at`, `issue` + `created_at`) now match the PY kitchen's key order; `workspaceMemberSchema` was left untouched (the PY member model has no `created_at`, so it was already at parity — the original "all four" framing over-counted). The golden matrix (`py/tests/test_types.py` + `ts/tests/types.test.ts`) now asserts the *serialized* wire shape in both tracks, so a serializer drift turns the fast suite red.

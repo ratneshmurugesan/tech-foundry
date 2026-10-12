@@ -32,13 +32,14 @@
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  EVENING (closeout) — ~5 min, the 5 EOD steps                   │
+│  EVENING (closeout) — ~5 min, the 6 EOD steps                   │
 │                                                                 │
 │  1. Note   — 3–5 lines: built / didn't / decisions / debt       │
 │  2. ADR    — only if a real decision was made (12 lines)        │
 │  3. Debt   — one row in debt.md (flip status or add)            │
 │  4. Roadmap— one line in v4/master.md §16                       │
-│  5. Manifest— `sh docs_v2/gen_llms.sh`                          │
+│  5. Ledger — only if a new pattern landed (horizon→in-use)      │
+│  6. Manifest— `sh docs_v2/gen_llms.sh`                          │
 │                                                                 │
 │  Then: git add -A → agent shows diff + proposes message         │
 │  YOU commit.                                                    │
@@ -89,6 +90,7 @@ Everything else is the actual work.
   wrong, not the script.
 - **Commit is your act.** The agent stages + proposes. You type the commit.
   30 seconds.
+- **The ledger is "only if."** Most days no new pattern lands → step 5 is skipped, so the ~5 min budget holds. On a pattern day it is a 30-second horizon→in-use move.
 
 ---
 
@@ -98,7 +100,7 @@ Everything else is the actual work.
 |-------|----------|----------|-------|
 | Kickoff | ~10–15 min (read all notes in order) | ~3 min (read manifest) | ~7–12 min |
 | Work | same | same | — |
-| Closeout | ~25–40 min (7-section note + README scan + draft prompt) | ~5 min (5 steps) | ~20–35 min |
+| Closeout | ~25–40 min (7-section note + README scan + draft prompt) | ~5 min (6 steps, 2 "only if") | ~20–35 min |
 | **Total ritual** | **~35–55 min** | **~8 min** | **~27–47 min/day** |
 
 Over a 10-day sprint: **~5–8 hours** of ritual reclaimed. And the gap
@@ -129,10 +131,11 @@ the whole chalkboard by hand. v2 just stamps the board.
 |------|------|--------------------|
 | `AGENTS.md` (repo root) | Session-start pointer | You say "read AGENTS.md" each morning |
 | `llms.txt` | The manifest (generated) | You never edit it; you run the script |
-| `gen_llms.sh` | The generator | You run it at EOD step 5 |
+| `gen_llms.sh` | The generator | You run it at EOD step 6 |
 | `debt.md` | The debt ledger | EOD step 3 (one row) |
 | `notes/day-NN-…` | Today's note | EOD step 1 (3–5 lines) |
 | `adrs/adr-NNN-…` | A decision | EOD step 2 (only if a decision) |
+| `product/taskflow/design-pattern-ledger.md` | The pattern ledger | EOD step 5 (only if a new pattern landed) |
 | `../docs/roadmaps/v4/master.md` | The roadmap | EOD step 4 (one line) |
 | `daily-flow.md` | This file | Read once; then it's muscle memory |
 
