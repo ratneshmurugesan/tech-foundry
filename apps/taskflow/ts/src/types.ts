@@ -67,3 +67,18 @@ export interface WorkspaceMember {
 // schema CHECK) checks `in ROLE_RANK` to false and falls out to the safe "not a member" shape.
 // Mirrors py `src/types.py::ROLE_RANK`; the authorizer reads rank from *data*, not branches.
 export const ROLE_RANK: Record<string, number> = { member: 1, owner: 2 }
+
+export interface Plan {
+    id: string;
+    workspace_id: string | null;
+    razorpay_order_id: string | null;
+    state: "trial"|"active"|"past_due"|"canceled";
+    created_at: Date;
+}
+
+export interface VerifyPaymentRequest {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    amount?: number;
+}

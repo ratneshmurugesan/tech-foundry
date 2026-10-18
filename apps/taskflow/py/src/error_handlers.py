@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .errors import NotFoundError, ConflictError, DatabaseCrashError, UnauthorizedError, ForbiddenError
+from .errors import NotFoundError, ConflictError, DatabaseCrashError, UnauthorizedError, ForbiddenError, VerificationError, ServiceUnavailableError
 
 logger = logging.getLogger("app")
 
@@ -87,6 +87,32 @@ def register_error_handlers(app: FastAPI):
             content={
                     "statusCode": 403,
                     "error": "Forbidden",
+                    "message": exc.message
+            }
+        )
+
+    @app.exception_handler(VerificationError)
+    async def verification_exception_handler(request: Request, exc: VerificationError):
+        logger.error("Verification", exc_info=exc)
+
+        return JSONResponse(
+            status_code=400,
+            content={
+                    "statusCode": 400,
+                    "error": "Verification",
+                    "message": exc.message
+            }
+        )
+
+    @app.exception_handler(ServiceUnavailableError)
+    async def service_unavailable_exception_handler(request: Request, exc: ServiceUnavailableError):
+        logger.error("Service Unavailable", exc_info=exc)
+
+        return JSONResponse(
+            status_code=503,
+            content={
+                    "statusCode": 503,
+                    "error": "Service Unavailable",
                     "message": exc.message
             }
         )

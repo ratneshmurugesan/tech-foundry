@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import { getDb, issues, projects, workspaceMembers, workspaces } from "./db";
-import { Issue, Project, Workspace, WorkspaceMember } from "./types";
+import { getDb, issues, paymentPlans, projects, workspaceMembers, workspaces } from "./db";
+import { Issue, Plan, Project, Workspace, WorkspaceMember } from "./types";
 import generateId from "./ids";
+import { transition } from "./razorpay";
 
 
 class PostgresRepository {
@@ -68,6 +69,155 @@ class PostgresRepository {
             .returning();
 
         return rows.length > 0
+    }
+
+    async findWorkspaceIdFor(worspaceId: string, userId: string): Promise<Workspace>{
+        const db = getDb()
+        const rows = await db
+            .select({
+                id: workspaces.id,
+                name: workspaces.name,
+                plan_tier: workspaces.plan_tier,
+                created_at: workspaces.created_at,
+            })
+            .from(workspaces)
+            .innerJoin(
+                workspaceMembers,
+                eq(workspaceMembers.workspace_id, workspaces.id)
+            )
+            .where(
+                and(
+                    eq(workspaceMembers.user_id, userId),
+                    eq(workspaces.id, worspaceId)
+                )
+            )
+            .limit(1)
+
+        return rows[0] as Workspace
+    }
+
+    async findWorkspacesFor(userId: string): Promise<Workspace[]>{
+        const db = getDb()
+        const rows = await db
+            .select({
+                id: workspaces.id,
+                name: workspaces.name,
+                plan_tier: workspaces.plan_tier,
+                created_at: workspaces.created_at,
+            })
+            .from(workspaces)
+            .innerJoin(
+                workspaceMembers,
+                eq(workspaceMembers.workspace_id, workspaces.id)
+            )
+            .where(eq(workspaceMembers.user_id, userId))
+        return rows as Workspace[]
+    }
+
+    async findWorkspaceTier(workspaceId: string): Promise<string>{
+        const db = getDb()
+        const rows = await db
+            .select({
+                plan_tier: workspaces.plan_tier,
+            })
+            .from(workspaces)
+            .where(
+                eq(workspaces.id, workspaceId)
+            )
+        // A missing workspace reads as "free" — the default tier that leaves the day-10
+        // ladder untouched (the plan->role link's input). Mirrors py `find_workspace_tier`.
+        return rows[0]?.plan_tier ?? "free"
+    }
+
+    async mintPlan(workspaceId: string, razorpayOrderId: string): Promise<Plan> {
+        const db = getDb()
+
+        const rows = await db
+        .insert(paymentPlans)
+        .values({
+            id: generateId(),
+            workspace_id: workspaceId,
+            razorpay_order_id: razorpayOrderId,
+            state: "trial"
+        })
+        .returning()
+        const row = rows[0]
+
+        return {
+            id: row.id,
+            workspace_id: row.workspace_id,
+            razorpay_order_id: row.razorpay_order_id,
+            state: row.state ?? "trial",
+            created_at: row.created_at as Date
+        }
+    }
+
+    async findPlan(workspaceId: string): Promise<Plan | undefined>{
+        const db = getDb()
+        const rows = await db
+        .select({
+            id: paymentPlans.id,
+            workspace_id: paymentPlans.workspace_id,
+            state: paymentPlans.state,
+            razorpay_order_id: paymentPlans.razorpay_order_id,
+            created_at: paymentPlans.created_at
+        })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.workspace_id, workspaceId))
+        .limit(1)
+        const row = rows[0]
+        if (!row) return undefined
+        return {
+            id: row.id,
+            workspace_id: row.workspace_id,
+            state: row.state ?? "trial",
+            razorpay_order_id: row.razorpay_order_id,
+            created_at: row.created_at as Date
+        }
+    }
+
+    async activatePlan(workspaceId: string): Promise<Plan | undefined> {
+        const db = getDb()
+
+        const rows = await db.select({
+            id: paymentPlans.id,
+            workspace_id: paymentPlans.workspace_id,
+            state: paymentPlans.state,
+            razorpay_order_id: paymentPlans.razorpay_order_id,
+            created_at: paymentPlans.created_at
+        })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.workspace_id, workspaceId))
+        .limit(1)
+
+        const row = rows[0]
+        if (!row) return undefined
+        const plan: Plan = {
+            id: row.id,
+            workspace_id: row.workspace_id,
+            state: row.state ?? "trial",
+            razorpay_order_id: row.razorpay_order_id,
+            created_at: row.created_at as Date
+        }
+        // Wire the ONE transition of the day: trial -> active (the `paid` event). Idempotent:
+        // a plan that is not a valid transition source (already active, or canceled) is
+        // returned as-is. Mirrors py `activate_plan`.
+        const newState = transition(plan.state, "paid")
+        if (newState === null) {
+            return plan
+        }
+        await db
+            .update(paymentPlans)
+            .set({ state: newState as Plan["state"] })
+            .where(eq(paymentPlans.id, plan.id))
+        if (newState === "active") {
+            await db
+                .update(workspaces)
+                .set({ plan_tier: "starter" })
+                .where(eq(workspaces.id, workspaceId))
+        }
+        plan.state = newState as Plan["state"]
+        return plan
     }
 
     /* --- Projects --- */
@@ -278,48 +428,6 @@ class PostgresRepository {
     }
 
 
-    async findWorkspaceIdFor(worspaceId: string, userId: string): Promise<Workspace>{
-        const db = getDb()
-        const rows = await db
-            .select({
-                id: workspaces.id,
-                name: workspaces.name,
-                plan_tier: workspaces.plan_tier,
-                created_at: workspaces.created_at,
-            })
-            .from(workspaces)
-            .innerJoin(
-                workspaceMembers,
-                eq(workspaceMembers.workspace_id, workspaces.id)
-            )
-            .where(
-                and(
-                    eq(workspaceMembers.user_id, userId),
-                    eq(workspaces.id, worspaceId)
-                )
-            )
-            .limit(1)
-
-        return rows[0] as Workspace
-    }
-
-    async findWorkspacesFor(userId: string): Promise<Workspace[]>{
-        const db = getDb()
-        const rows = await db
-            .select({
-                id: workspaces.id,
-                name: workspaces.name,
-                plan_tier: workspaces.plan_tier,
-                created_at: workspaces.created_at,
-            })
-            .from(workspaces)
-            .innerJoin(
-                workspaceMembers,
-                eq(workspaceMembers.workspace_id, workspaces.id)
-            )
-            .where(eq(workspaceMembers.user_id, userId))
-        return rows as Workspace[]
-    }
 
     async findMembership(workspaceId: string, sub: string): Promise<WorkspaceMember | undefined> {
         const db = getDb()

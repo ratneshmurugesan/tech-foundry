@@ -32,3 +32,17 @@ export class ForbiddenError extends Error {
         this.name = 'Forbidden'
     }
 }
+
+export class VerificationError extends Error {
+    constructor(message = 'payment signature did not verify') {
+        super(message)
+        this.name = 'Verification'
+    }
+}
+
+export class ServiceUnavailableError extends Error {
+    constructor(message = 'Razorpay is not configured') {
+        super(message)
+        this.name = 'Service Unavailable'
+    }
+}

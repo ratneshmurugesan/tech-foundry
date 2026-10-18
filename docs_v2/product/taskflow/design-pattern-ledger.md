@@ -33,6 +33,7 @@ kitchen = a language track · door = Auth0 · cellar = Postgres · cashier = Raz
 | Golden master / characteristic test | the golden matrix (`py/tests` + `ts/tests`) | both kitchens must pass the *same* matrix | swap a kitchen's internals; the matrix catches drift |
 | Adapter (architecture) | the parity wall, ADR-001 | two kitchens, one behavioral contract | run either kitchen; the contract is the invariant |
 | Pure-function core | `assert_role` · `map_fail_reason` · `_is_jws` · `minRoleFor` | the hard logic has no hidden I/O | trivially testable, trivially swappable |
+| State machine | `transition`/`transitionState` in `razorpay.py`/`razorpay.ts` | the subscription lifecycle is rules about what may change to what | add a transition/state by adding a table row; the webhook day (16b) wires the rest |
 
 ---
 
@@ -109,6 +110,13 @@ kitchen = a language track · door = Auth0 · cellar = Postgres · cashier = Raz
 - **Why**: each layer has one job and depends only on the layer below it. A route never imports `db` or `models`.
 - **Swap story**: this is what lets the parity wall work at all — because the layers are clean, the *same* layering can be re-expressed in a second language (the TS kitchen) and still behave identically.
 
+## The counter (the cashier — `razorpay.py` / `razorpay.ts`)
+
+### State machine
+- **Where**: `transition(state, event)` (PY) / `transitionState(state, event)` (TS) — a pure function over the four plan states (`trial` / `active` / `past_due` / `canceled`). The `verify` route calls it: `trial→active` on a matched signature, then upserts the plan row and re-checks the role. The DB `CHECK` constraint is the *last* line of defense — a bad state is a `500`, not a silent bad row.
+- **Why**: the subscription lifecycle is a set of *rules about what may change to what* — exactly the shape a state machine models. Keeping it pure means the interesting logic (the transitions) is testable with zero services, and the two kitchens hold the *same* table.
+- **Swap story**: add a transition (or a new state) by adding a row to the table — the `verify` route, the DB constraint, and the tests keep their shape. The webhook day (16b) wires the remaining edges (`active→past_due` / `past_due→active` / `any→canceled`) into the same table.
+
 ## The proof (the golden matrix)
 
 ### Test double / seam (ADR-010 zero-service)
@@ -132,8 +140,7 @@ kitchen = a language track · door = Auth0 · cellar = Postgres · cashier = Raz
 
 These are patterns the roadmap **will** introduce. They are listed here so the ledger has a forward edge; they are *not* "in use" until the day lands and the matrix proves them in both kitchens.
 
-- **State machine** — the `plan_tier` transition (free → starter → …) on the day-15 money path. Today `plan_tier` is a plain column (`server_default 'free'`); the *transition rules* (what may change to what, and only on a paid event) are the pattern that day-15 adds.
-- **Event / observer** — the "money event" (the moment a tier flips) as a named seam the day-15 prompt calls for. Today there is no event bus; the seam is a *planned* subscription point, not a live one.
+- **Event / observer** — the "money event" (the moment a tier flips) as a named seam. The **state machine** it drives is now *in use* (see "The counter" above); the *event bus* that would let other components subscribe to a tier flip is still a *planned* subscription point, not a live one — it ships with the webhook day (16b).
 
 > **Rule for this section**: a pattern moves from *horizon* to *in use* only when it (a) is built in **both** kitchens and (b) is held by the golden matrix. Until then it stays here, honest about being a plan.
 >

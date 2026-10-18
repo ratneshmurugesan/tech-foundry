@@ -1,6 +1,6 @@
 import { FastifyError, FastifyInstance } from 'fastify'
 import { ZodError } from 'zod'
-import { ConflictError, NotFoundError, DatabaseCrashError, UnauthorizedError } from './errors'
+import { ConflictError, NotFoundError, DatabaseCrashError, UnauthorizedError, VerificationError, ServiceUnavailableError } from './errors'
 
 export function registerErrorHandler(fastify: FastifyInstance) {
     fastify.setErrorHandler((unknownError: unknown, request, response) => {
@@ -71,6 +71,31 @@ export function registerErrorHandler(fastify: FastifyInstance) {
                 message: error.message,
             })
         }
+
+        if(error instanceof VerificationError) {
+            request.log.error({
+                err: error.message ?? error
+            })
+
+            return response.status(400).send({
+                statusCode: 400,
+                error: 'Verification',
+                message: error.message,
+            })
+        }
+
+        if(error instanceof ServiceUnavailableError) {
+            request.log.error({
+                err: error.message ?? error
+            })
+
+            return response.status(503).send({
+                statusCode: 503,
+                error: 'Service Unavailable',
+                message: error.message,
+            })
+        }
+
 
         // 5. Fallback for DB Crashes and Uncaught Exceptions (HTTP 500)
         request.log.error({ err: error })

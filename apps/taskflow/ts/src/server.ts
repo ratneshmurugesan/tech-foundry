@@ -3,9 +3,12 @@ import PostgresRepository from './repository'
 import z from 'zod'
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod'
 import { registerErrorHandler } from './errorHandler'
-import { DatabaseCrashError, ForbiddenError, NotFoundError } from './errors'
+import { DatabaseCrashError, ForbiddenError, NotFoundError, ServiceUnavailableError, VerificationError } from './errors'
 import { doorHook } from './auth'
-import { authorizeHook } from './authorize';
+import { assertRole, authorizeHook } from './authorize';
+import { createOrder, verifySignature } from './razorpay';
+import { STARTER_AMOUNT_PAISE } from './constants';
+import { Plan } from './types';
 
 const repo = new PostgresRepository()
 
@@ -74,6 +77,30 @@ const workspaceMemberSchema = z.object({
 })
 const createWorkspaceMemberSchema = workspaceMemberSchema.omit({ id: true })
 
+// The plan's wire shape (mirrors py `types.Plan`).
+const planSchema = z.object({
+    id: z.string(),
+    workspace_id: z.string().nullable(),
+    razorpay_order_id: z.string().nullable(),
+    state: z.enum(["trial", "active", "past_due", "canceled"]),
+    created_at: z.date(),
+})
+// The checkout response (mirrors py `create_payment`'s return — NOT the raw order).
+const checkoutResponseSchema = z.object({
+    order_id: z.string(),
+    amount: z.number(),
+    currency: z.string(),
+    key_id: z.string(),
+    plan: planSchema,
+})
+// The client's verify payload — the three fields Razorpay's checkout posts back, plus the
+// amount (checked for parity with the order; not part of the signature).
+const verifyPaymentSchema = z.object({
+    razorpay_order_id: z.string(),
+    razorpay_payment_id: z.string(),
+    razorpay_signature: z.string(),
+    amount: z.number().optional(),
+})
 app.get("/", {
     schema: {
         response: {
@@ -261,7 +288,112 @@ app.post("/workspaces/:id/members", {
         } catch (dbError) {
             throw new DatabaseCrashError(dbError)
         }
-    })
+})
+app.post("/workspaces/:id/billing/checkout", {
+    schema: {
+        params: idParamSchema,
+        response: {
+            201: checkoutResponseSchema,
+        }
+    }
+}, async (request, response) => {
+    // Fail-closed on missing keys FIRST (the inspector's 503) — before any auth or DB.
+    const key_id = process.env["RAZORPAY_KEY_ID"]
+    const key_secret = process.env["RAZORPAY_SECRET"]
+    const { id } = request.params
+    const sub = request.user?.sub
+
+    if(!key_id || !key_secret){
+        throw new ServiceUnavailableError()
+    } 
+    // Only the owner of the workspace may start a checkout.
+    await assertRole(id, sub, "owner", repo.findMembership)
+
+    let existingWorkspace;
+    try {
+        existingWorkspace = await repo.findWorkspaceById(id)
+    } catch (dbError) {
+        // 500 Error: Hidden from user, fully logged internally
+        throw new DatabaseCrashError(dbError);
+    }
+    if (!existingWorkspace) {
+        throw new NotFoundError(`Workspace with ID ${id} does not exist`)
+    }
+
+    const order = await createOrder(
+        key_id,
+        key_secret,
+        STARTER_AMOUNT_PAISE,
+        "INR",
+        id
+    )
+
+    let plan;
+    try {
+        plan = await repo.mintPlan(id, order["id"] as string)
+    } catch (dbError) {
+        throw new DatabaseCrashError(dbError);
+    }
+    return {
+        order_id: order["id"] as string,
+        amount: order["amount"] as number,
+        currency: (order["currency"] as string | undefined) ?? "INR",
+        key_id,
+        plan
+    }
+})
+app.post("/workspaces/:id/billing/verify", {
+    schema: {
+        body: verifyPaymentSchema,
+        params: idParamSchema,
+        response: {
+            200: planSchema,
+        }
+    }
+}, async (request, response) => {
+    // Fail-closed on missing keys FIRST (the inspector's 503) — before any auth or DB.
+    const key_id = process.env["RAZORPAY_KEY_ID"]
+    const key_secret = process.env["RAZORPAY_SECRET"]
+    const { id } = request.params
+    const sub = request.user?.sub
+    const body = request.body
+
+    if(!key_id || !key_secret){
+        throw new ServiceUnavailableError()
+    } 
+    // Only the owner of the workspace may verify a payment.
+    await assertRole(id, sub, "owner", repo.findMembership)
+
+    let plan: Plan | undefined;
+    try {
+        plan = await repo.findPlan(id)
+    } catch (dbError) {
+        throw new DatabaseCrashError(dbError);
+    }
+
+    if(!plan || plan.razorpay_order_id !== body.razorpay_order_id) {
+        throw new VerificationError();
+    }
+
+    // The ONE real-code seam of the day: verify the client's HMAC over order_id|payment_id.
+    const isSignatureVerified = verifySignature(
+        body.razorpay_order_id,
+        body.razorpay_payment_id,
+        body.amount ?? 0,
+        key_secret,
+        body.razorpay_signature
+    )
+    if(!isSignatureVerified) {
+        throw new VerificationError(); 
+    }
+
+    // Wire the ONE transition of the day: trial -> active (idempotent if already active).
+    const activated = await repo.activatePlan(id)
+    if (!activated) {
+        throw new VerificationError();
+    }
+    return activated
+})
 
 
 app.get("/projects", {

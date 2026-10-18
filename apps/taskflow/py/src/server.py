@@ -2,13 +2,18 @@ from fastapi import FastAPI, Path, Request
 from fastapi.responses import Response
 from typing import List
 from contextlib import asynccontextmanager
+import httpx
+import os
 
 from .repository import PostgresRepository
-from .types import Workspace, CreateWorkspace, UpdateWorkspace, Project,  CreateProject, UpdateProject, Issue, CreateIssue, UpdateIssue, WorkspaceMember, CreateWorkspaceMember
+from .types import Workspace, CreateWorkspace, UpdateWorkspace, Project,  CreateProject, UpdateProject, Issue, CreateIssue, UpdateIssue, WorkspaceMember, CreateWorkspaceMember, Plan, VerifyPaymentRequest
 from .error_handlers import register_error_handlers
-from .errors import DatabaseCrashError, ConflictError, NotFoundError
+from .errors import DatabaseCrashError, ConflictError, NotFoundError, ServiceUnavailableError, VerificationError
 from .auth import AuthenticateBadgeMiddleware
-from .authorize import AuthorizeMiddleware, _sub
+from .authorize import AuthorizeMiddleware, _sub, assert_role
+from .constants import STARTER_AMOUNT_PAISE
+
+from.razorpay import create_order, verify_signature
 
 __all__ = ["app"]
 
@@ -164,7 +169,66 @@ async def get_members(id: str, request: Request) -> List[WorkspaceMember]:
             raise NotFoundError(f"Workspace with ID {id} does not exist")
 
     return existing_ws_members
+@app.post("/workspaces/{id}/billing/checkout", status_code=201)
+async def create_payment(id: str, request: Request):
+    # Fail-closed on missing keys FIRST (the inspector's 503) — before any auth or DB.
+    key_id = os.environ.get("RAZORPAY_KEY_ID")
+    key_secret = os.environ.get("RAZORPAY_SECRET")
+    if not key_id or not key_secret:
+        raise ServiceUnavailableError()
 
+    sub = _sub(request)
+    # Only the owner of the workspace may start a checkout.
+    await assert_role(id, sub, "owner", repo.find_membership)
+
+    ws = await repo.find_workspace_by_id(id)
+    if not ws:
+        raise NotFoundError(f"Workspace with ID {id} does not exist")
+
+    order = await create_order(key_id, key_secret, STARTER_AMOUNT_PAISE, "INR", receipt=id)
+    try:
+        plan = await repo.mint_plan(id, order["id"])
+    except Exception as db_error:
+        raise DatabaseCrashError(db_error)
+
+    return {
+        "order_id": order["id"],
+        "amount": order["amount"],
+        "currency": order.get("currency", "INR"),
+        "key_id": key_id,
+        "plan": plan,
+    }
+@app.post("/workspaces/{id}/billing/verify", status_code=200)
+async def verify_payment(id: str, body: VerifyPaymentRequest, request: Request):
+    # Fail-closed on missing keys FIRST (the inspector's 503) — before any auth or DB.
+    key_id = os.environ.get("RAZORPAY_KEY_ID")
+    key_secret = os.environ.get("RAZORPAY_SECRET")
+    if not key_id or not key_secret:
+        raise ServiceUnavailableError()
+
+    sub = _sub(request)
+    # Only the owner of the workspace may verify a payment.
+    await assert_role(id, sub, "owner", repo.find_membership)
+
+    try:
+        plan = await repo.find_plan(id)
+    except Exception as db_error:
+        raise DatabaseCrashError(db_error)
+    if not plan or plan.razorpay_order_id != body.razorpay_order_id:
+        raise VerificationError()
+
+    # The ONE real-code seam of the day: verify the client's HMAC over order_id|payment_id.
+    if not verify_signature(
+        order_id=body.razorpay_order_id,
+        payment_id=body.razorpay_payment_id,
+        amount=body.amount or 0,
+        secret=key_secret,
+        signature=body.razorpay_signature,
+    ):
+        raise VerificationError()
+
+    # Wire the ONE transition of the day: trial -> active (idempotent if already active).
+    return await repo.activate_plan(id)
     
 @app.get("/projects")
 async def get_projects(request: Request) -> List[Project]:

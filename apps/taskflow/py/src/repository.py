@@ -1,7 +1,8 @@
 from typing import List, Optional
 from .db import get_session
-from .models import WorkspaceModel, ProjectModel, IssueModel, WorkspaceMemberModel
-from .types import Workspace, Project, Issue, WorkspaceMember, CreateWorkspaceMember
+from .models import WorkspaceModel, ProjectModel, IssueModel, WorkspaceMemberModel, PaymentPlansModel
+from .types import Workspace, Project, Issue, WorkspaceMember, CreateWorkspaceMember, Plan
+from .razorpay import transition
 from .ids import generate_id
 from sqlalchemy import select, update, and_
 
@@ -351,5 +352,73 @@ class PostgresRepository:
                 )
             )
             await session.commit()
+        finally:
+            await session.close()
+
+    async def find_workspace_tier(self, workspace_id: str) -> str:
+        # The workspace's plan_tier (the plan->role link's input). A missing workspace
+        # reads as "free" — the default tier that leaves the day-10 ladder untouched.
+        session = await get_session()
+        try:
+            result = await session.execute(
+                select(WorkspaceModel.plan_tier).where(WorkspaceModel.id == workspace_id)
+            )
+            row = result.scalar_one_or_none()
+            return row or "free"
+        finally:
+            await session.close()
+
+    async def mint_plan(self, workspace_id: str, razorpay_order_id: str) -> Plan:
+        # Mint the pending (trial) plan bound to the workspace, recording the Razorpay
+        # order id. Returns the Plan so the checkout route can echo it back.
+        session = await get_session()
+        try:
+            model = PaymentPlansModel(
+                id=generate_id(),
+                workspace_id=workspace_id,
+                razorpay_order_id=razorpay_order_id,
+                state="trial",
+            )
+            session.add(model)
+            await session.commit()
+            await session.refresh(model)
+            return Plan.model_validate(model)
+        finally:
+            await session.close()
+
+    async def find_plan(self, workspace_id: str) -> Plan | None:
+        session = await get_session()
+        try:
+            result = await session.execute(
+                select(PaymentPlansModel).where(PaymentPlansModel.workspace_id == workspace_id)
+            )
+            row = result.scalar_one_or_none()
+            return Plan.model_validate(row) if row else None
+        finally:
+            await session.close()
+
+    async def activate_plan(self, workspace_id: str) -> Plan | None:
+        # Wire the ONE transition of the day: trial -> active (the `paid` event), and
+        # lift the workspace's tier to the paid product. Idempotent: a plan that is not
+        # a valid transition source (e.g. already active, or canceled) is returned as-is.
+        session = await get_session()
+        try:
+            result = await session.execute(
+                select(PaymentPlansModel).where(PaymentPlansModel.workspace_id == workspace_id)
+            )
+            plan = result.scalar_one_or_none()
+            if plan is None:
+                return None
+            new_state = transition(plan.state, "paid")
+            if new_state is None:
+                return plan
+            plan.state = new_state
+            if new_state == "active":
+                ws = await session.get(WorkspaceModel, workspace_id)
+                if ws is not None:
+                    ws.plan_tier = "starter"
+            await session.commit()
+            await session.refresh(plan)
+            return Plan.model_validate(plan)
         finally:
             await session.close()

@@ -23,3 +23,13 @@ class ForbiddenError(Exception):
     def __init__(self, message: str = "Forbidden"):
         self.message = message
         super().__init__(self.message)
+
+class VerificationError(Exception):
+    def __init__(self, message: str = "payment signature did not verify"):
+        self.message = message
+        super().__init__(self.message)
+
+class ServiceUnavailableError(Exception):
+    def __init__(self, message: str = "Razorpay is not configured"):
+        self.message = message
+        super().__init__(self.message)

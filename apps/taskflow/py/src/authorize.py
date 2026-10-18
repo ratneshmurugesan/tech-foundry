@@ -24,8 +24,11 @@ def _forbidden(message: str) -> JSONResponse:
         content={"statusCode": 403, "error": "Forbidden", "message": message})
 
 async def assert_role(
-    workspace_id: str | None, sub: str | None, min_role: str,
+    workspace_id: str | None, 
+    sub: str | None, 
+    min_role: str,
     find_membership: Callable[[str, str], Awaitable[WorkspaceMember | None]],
+    plan_tier = None
 ) -> None:
     """The *entire* permission decision of the day, as a pure function.  No request object, no HTTP, no
     session of its own:  the caller passes the one membership read (a coroutine taking
@@ -38,7 +41,13 @@ async def assert_role(
     role = row.role if row and row.role in ROLE_RANK else None
     if role is None:
         raise ForbiddenError(NOT_A_MEMBER)
-    if ROLE_RANK[role] < ROLE_RANK[min_role]:
+    # The plan->role link (ADR-014): a *paid* (starter) workspace lifts the `member` rung
+    # to the owner rank — a derived privilege, not a third role. `free` / omitted (None)
+    # leaves the day-10 ladder untouched. The lift is applied BEFORE the single rank check.
+    rank = ROLE_RANK[role]
+    if role == "member" and plan_tier == "starter":
+        rank = ROLE_RANK["owner"]
+    if rank < ROLE_RANK[min_role]:
         raise ForbiddenError(REQUIRES_OWNER)
 
 def _min_role_for(method: str, path: str) -> str | None:
@@ -57,7 +66,10 @@ def _min_role_for(method: str, path: str) -> str | None:
         # item routes only; CREATE routes stay ungated here (workspace lives in the body)
         return "owner" if method in ("PATCH", "DELETE") else (
             "member" if len(parts) == 2 else None)
+    if parts[2] == "billing":
+        return "owner"
     return None
+
 
 def _sub(request: Request) -> str | None:
     user = getattr(request.state, "user", None)   # doorless → attr never set → None
@@ -76,8 +88,9 @@ class AuthorizeMiddleware(BaseHTTPMiddleware):
         sub = user.get("sub") if user else None
 
         ws_id = await self._workspace_id_for(request)
+        tier = await repo.find_workspace_tier(ws_id)
         try:
-            await assert_role(ws_id, sub, min_role, repo.find_membership)
+            await assert_role(ws_id, sub, min_role, repo.find_membership, tier)
         except ForbiddenError as e:
             return _forbidden(e.message)
         return await call_next(request)

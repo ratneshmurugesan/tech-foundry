@@ -114,3 +114,22 @@ class WorkspaceMember(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 ROLE_RANK = {"member": 1, "owner": 2}
+
+class Plan(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    workspace_id: str | None = Field(default=None, description="workspaceId")
+    razorpay_order_id: Optional[str] | None = None
+    state: Literal["trial","active","past_due","canceled"] | None = Field(default="trial", description="state")
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    model_config = ConfigDict(from_attributes=True)
+
+class VerifyPaymentRequest(BaseModel):
+    """The client's verify payload — the three fields Razorpay's checkout posts back,
+    plus the amount (checked for parity with the order; not part of the signature)."""
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    amount: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)  

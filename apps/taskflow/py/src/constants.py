@@ -2,3 +2,13 @@
 ALLOWED_DOMAINS = {"dev-qr8x8ecg3nfb603i.uk.auth0.com"}
 # Street (lighthouse "/") + menu stay open - menu == swagger doc -> counter = all routes
 PUBLIC_PATHS = {"/", "/docs", "/redoc", "/openapi.json", "/health"}
+
+RAZORPAY_API =  "api.razorpay.com/v1"
+STARTER_AMOUNT_PAISE = 49900
+# The plan state machine's WIRED transitions (ADR-014). Only trial->active ships today
+# (the `paid` event, fired by the verify route). The rest are named-but-NOT-wired (the
+# webhook day): active->past_due, past_due->active, any->canceled. `transition()` returns
+# None for anything not in this table, so the named ones read as "refused" until they ship.
+TRANSITIONS = {
+    "trial": {"paid": "active"},
+}

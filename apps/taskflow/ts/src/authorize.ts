@@ -26,6 +26,7 @@ export async function assertRole(
     sub: string | undefined,
     minRole: "owner" | "member",
     findMembership: FindMembership,
+    planTier?: string
 ): Promise<void> {
     if (sub === undefined || workspaceId === undefined) {
         throw new ForbiddenError(NOT_A_MEMBER);
@@ -33,10 +34,14 @@ export async function assertRole(
     const row = await findMembership(workspaceId, sub);
     // rank only for a known role — a stale off-ladder role falls out to the safe shape.
     const role = row && row.role in ROLE_RANK ? row.role : undefined;
+    let rank = role && ROLE_RANK[role]
     if (role === undefined) {
         throw new ForbiddenError(NOT_A_MEMBER);
     }
-    if (ROLE_RANK[role] < ROLE_RANK[minRole]) {
+    if(role === 'member' && planTier === "starter"){
+        rank = ROLE_RANK["owner"]
+    }
+    if (rank && rank < ROLE_RANK[minRole]) {
         throw new ForbiddenError(REQUIRES_OWNER);
     }
 }
@@ -62,6 +67,9 @@ export function minRoleFor(method: string, path: string): "owner" | "member" | n
         // item routes only; CREATE routes stay ungated (workspace lives in the body)
         if (method === "PATCH" || method === "DELETE") return "owner";
         return parts.length === 2 ? "member" : null;
+    }
+    if(parts[2] == "billing") {
+        return "owner"
     }
     return null;
 }
@@ -112,8 +120,10 @@ export async function authorizeHook(request: FastifyRequest, reply: FastifyReply
 
     const sub = request.user?.sub;
     const wsId = await workspaceIdFor(request);
+
+    const planTier = await repo.findWorkspaceTier(wsId!)
     try {
-        await assertRole(wsId, sub, minRole, (wid, s) => repo.findMembership(wid, s));
+        await assertRole(wsId, sub, minRole, (wid, s) => repo.findMembership(wid, s), planTier);
     } catch (e) {
         if (e instanceof ForbiddenError) {
             return reply.status(403).send({ statusCode: 403, error: "Forbidden", message: e.message });

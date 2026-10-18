@@ -35,6 +35,14 @@ export const workspaceMembers = pgTable("workspace_members", {
     index("ix_ws_member_user").on(t.user_id),
 ])
 
+export const paymentPlans = pgTable("payment_plans", {
+    id: text("id").primaryKey(),
+    workspace_id: text("workspace_id").references(() => workspaces.id, { onDelete: 'cascade'}),
+    state: text("state", { enum: ["trial", "active", "past_due", "canceled"]}).default("trial"),
+    razorpay_order_id: text("razorpay_order_id"),
+    created_at: timestamp("created_at", { mode: "date" }).defaultNow()
+})
+
 
 let db: ReturnType<typeof drizzle> | undefined;
 

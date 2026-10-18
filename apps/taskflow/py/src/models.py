@@ -44,3 +44,14 @@ class WorkspaceMemberModel(Base):
     role=Column(String, nullable=False, server_default=text("'member'"))
     created_at=Column(DateTime, server_default=text('now()'))
 
+class PaymentPlansModel(Base):
+    __tablename__ = "payment_plans"
+    __table_args__ = (
+        CheckConstraint("state IN ('trial','active','past_due','canceled')"),
+    )
+
+    id = Column(String(36), primary_key=True)
+    workspace_id=Column(String(36), ForeignKey("workspaces.id", ondelete='cascade'), index=False)
+    state=Column(String, nullable=False, server_default=text("'trial'"))
+    razorpay_order_id=Column(String, nullable=True)
+    created_at=Column(DateTime, server_default=text('now()'))
