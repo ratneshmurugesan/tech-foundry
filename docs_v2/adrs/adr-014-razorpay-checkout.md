@@ -99,4 +99,4 @@ to keep shape-parity across the parity wall (ADR-001).
 - [ADR-007](adr-007-crud-error-contract-cascade.md) — the receptionist (the envelope; `VerificationError` 400, `ServiceUnavailable` 503)
 - [ADR-003](adr-003-id-generation-strategy.md) — the ticket numbers (we own the uuids; the one string exception)
 - [day-14 note](../../docs_v2/notes/day-14-razorpay-checkout-2026-10-09-1708.md) — the `plan_tier` precondition
-- [debt ledger](../../docs_v2/debt.md) — `12a→12e`
+- [debt ledger](../../docs_v2/debt.md)

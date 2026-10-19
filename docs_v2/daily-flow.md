@@ -80,7 +80,7 @@ Everything else is the actual work.
 ## Practical tips to stay in budget
 
 - **Don't over-write the note.** 3–5 lines. "Built X, Y. Decided Z (ADR-016).
-  Debt 12a→12e still open." Done. If you find yourself writing a paragraph,
+  Debt 16b still open." Done. If you find yourself writing a paragraph,
   you're re-deriving instead of recording.
 - **ADR only for *code/tech* decisions.** If you just built what the roadmap
   said, no ADR. Doc-format or process changes get a line in the note — never

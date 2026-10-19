@@ -30,8 +30,8 @@ docs_v2/
 ## The two rules the whole shape exists to enforce
 1. **A debt lives in exactly one row, in one place** (`debt.md`). Any ADR /
    note that defers something *links the row* — it never re-states
-   the payoff condition. The 11a/11b/11c debts lived in 15+ re-statements
-   across three docs and drifted into an invented "2026-10-10" date and an
+   the payoff condition. The early debts lived in 15+ re-statements
+   across three docs and drifted into an invented date and an
    invented close; the roadmap is a *single line per day*, not a re-derivation
    of it. One row cannot drift.
 2. **The manifest is derived, not written** (`gen_llms.sh` → `llms.txt`).

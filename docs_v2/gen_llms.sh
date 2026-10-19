@@ -64,8 +64,8 @@ SUMMARY
   bt=$(printf '\140')    # a backtick via octal — none appears raw inside the awk program below
   # Anchor the match to the *status* word at the START of the Status column (an optional
   # backtick-wrapped word), not a substring anywhere in the cell — a done row whose prose
-  # happens to contain "open" must not be counted as open. (The 11b false-positive of
-  # 2026-10-09 is the caution that earned this anchor.)
+  # happens to contain "open" must not be counted as open. (A done row whose prose once
+  # contained "open" earned this anchor.)
   open=$(awk -F'|' -v bt="$bt" '/^\|/ && $6 ~ ("^[[:space:]]*(" bt ")?(open|claimed)") { id=$2; gsub(/[*]/, "", id); gsub(bt, "", id); sub(/^ +/, "", id); if (split(id, A, " ") > 0) { if (s != "") s = s " · "; s = s A[1] } } END { print s }' "$DOCS"/debt.md 2>/dev/null || true)
   if [ -n "$open" ]; then
     echo "- open debts: $open → debt.md (triggers, not dates)"
