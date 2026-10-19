@@ -4,6 +4,7 @@
 > it never re-states the due date (ADR-013, rule 1).
 > **Statuses**: `open` → `claimed(day-N)` → `done` (link note) / `dropped` (link ADR + why).
 > *Unowed* rows carry a concrete **revisit-when**, never a date — dates lie; triggers don't.
+> **Prune on close**: when a row flips to `done` or `dropped`, remove it from this table (its resolution lives in the note/ADR it links). The ledger holds *open* work only.
 
 | Debt | Deferred on | Why deferred | Owed to | Status |
 |------|-------------|--------------|---------|--------|

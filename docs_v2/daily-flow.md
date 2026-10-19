@@ -36,7 +36,7 @@
 │                                                                 │
 │  1. Note   — 3–5 lines: built / didn't / decisions / debt       │
 │  2. ADR    — only if a real decision was made (12 lines)        │
-│  3. Debt   — one row in debt.md (flip status or add)            │
+│  3. Debt   — one row in debt.md (add / flip / prune on close)   │
 │  4. Roadmap— one line in v4/master.md §16                       │
 │  5. Ledger — only if a new pattern landed (horizon→in-use)      │
 │  6. Manifest— `sh docs_v2/gen_llms.sh`                          │
