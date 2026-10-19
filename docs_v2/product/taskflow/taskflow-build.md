@@ -38,6 +38,8 @@ Three layers, in order. **A request must clear all three.** *(Grounded in `auth.
 | `/workspaces/{id}` | DELETE | owner | cascades |
 | `/workspaces/{id}/members` | POST | owner | invite; `409` if already a member |
 | `/workspaces/{id}/members` | GET | member | empty list = `200 []`; missing workspace = `404` |
+| `/workspaces/{id}/billing/checkout` | POST | owner | mints a pending `trial` plan (no state change); `503` if unkeyed (ADR-014) |
+| `/workspaces/{id}/billing/verify` | POST | owner | on sig match `trial→active` + `plan_tier→starter`; `400` on mismatch (ADR-014) |
 | `/projects` | GET | — (scoped) | **only the caller's** projects (walks `project → workspace`) |
 | `/projects/{id}` | GET | member | |
 | `/projects/{id}` | PATCH | owner | moving to another workspace must name an existing one |
@@ -53,10 +55,10 @@ Three layers, in order. **A request must clear all three.** *(Grounded in `auth.
 
 ## 2. The plan & the money (the seam, and the next build)
 
-This is where TaskFlow stops being a toy and becomes a *business*. It has two parts — **one shipped, one next.**
+This is where TaskFlow stops being a toy and becomes a *business*. It has two parts — **both shipped (day-15)**; the webhook-driven transitions are next.
 
 ### 2.1 Shipped: the plan tier column
-`workspaces.plan_tier` exists on **both** tracks (`free | starter`, default `free`). It is the *data* half of the story. **What it does not yet do**: nothing reads it to change behavior. The role ladder and the plan tier are *present but not yet coupled*.
+`workspaces.plan_tier` exists on **both** tracks (`free | starter`, default `free`). It is the *data* half of the story — and since day-15 the *other* half reads it: the authorizer's plan→role link (ADR-014, Decide-4) couples the tier to the role ladder. The tier is **system-managed**: only the plan state machine (the checkout) writes it; it is never client-settable.
 
 ### 2.2 The intent (the day-10 contract, do not lose it)
 > *"the moment a payer exists, the two roles become the two products."*
@@ -64,9 +66,9 @@ This is where TaskFlow stops being a toy and becomes a *business*. It has two pa
 - **Free tier** → a workspace's `member` is **read-only**.
 - **Paid (starter) tier** → a workspace's `member` **may write**.
 
-The RBAC layer was *built to unlock exactly this*. The next build wires **plan tier → role capability**, so the money story *compounds* instead of the two decoupling.
+The RBAC layer was *built to unlock exactly this*. **Wired day-15 (ADR-014, Decide-4)**: the `plan_tier` input inside `assert_role`/`assertRole` — free member read-only, starter member may write — so the money story *compounds* instead of the two decoupling.
 
-### 2.3 Next: the plan state machine + Razorpay checkout
+### 2.3 Shipped (day-15): the plan state machine + Razorpay checkout
 The full subscription lifecycle, modeled on **Ghost's content-states**:
 
 ```
@@ -120,7 +122,7 @@ flowchart LR
     KEYS["Key-ring<br/>RBAC authorizer"]
     ROUTE["Waiter<br/>routes"]
     CHEF["Chef<br/>business logic"]
-    CASH["Cashier<br/>Razorpay (next)"]
+    CASH["Cashier<br/>Razorpay (shipped)"]
   end
   CELLAR[("Cellar<br/>Postgres")]
   C -->|Bearer jwt| DOOR --> KEYS --> ROUTE --> CHEF --> CELLAR
@@ -129,7 +131,7 @@ flowchart LR
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-10-10)
+## 5. What's built vs. what's next (honest state, 2026-10-19)
 
 | Capability | State |
 |---|---|
@@ -138,9 +140,9 @@ flowchart LR
 | RBAC key-ring (owner/member ladder, two 403s) | ✅ shipped |
 | Multi-tenant scoping (see only your own) | ✅ shipped, golden-matrix guarded |
 | **Wire-level response parity** (identical JSON, both kitchens) | ✅ **closed 2026-10-10** — the three trailing zod schemas now match the PY key order; the member was already at parity; the golden matrix asserts the serialized shape in both tracks |
-| Plan tier column (`free`/`starter`) | ✅ shipped (data only) |
-| **Plan tier → role capability** (free=read-only, paid=write) | ⏳ next (the day-10 contract) |
-| **Plan state machine** (trial→active→past_due→canceled) | ⏳ next (pure, testable) |
+| Plan tier column (`free`/`starter`) | ✅ shipped (system-managed; the authorizer reads it — §2.1) |
+| **Plan tier → role capability** (free=read-only, paid=write) | ✅ shipped day-15 (ADR-014 — the `plan_tier` input inside `assert_role`; a derived privilege, not a third role) |
+| **Plan state machine** (trial→active→past_due→canceled) | ✅ shipped day-15 (pure, tested) — only `trial→active` wired; the other edges ship with the webhook day (debt 16b) |
 | **Razorpay checkout** (create order, verify payment) | ✅ shipped day-15 (ADR-014) |
 | Webhook / subscription lifecycle (live) | ⏳ named debt (live-Razorpay class) |
 | UI in a browser (Sprint 3) | ⏳ ahead |
@@ -150,8 +152,8 @@ flowchart LR
 
 ## 6. Open questions (rule 16 — named, not assumed)
 
-1. **Plan-tier coupling point**: does the tier gate *writes* at the **authorizer** (a third rank step) or at the **route** (a capability check)? The day-12 prompt leans *authorizer* (Decide-4) — confirm before building.
-2. **Razorpay key**: does a key exist in any env you control? (The foundry does *not* create Razorpay accounts — that's your call.)
+1. ~~**Plan-tier coupling point**~~ — **resolved day-15 (ADR-014, Decide-4)**: the tier gates the member ladder *inside the authorizer* — `assert_role`/`assertRole` gains a `plan_tier` input that lifts a member's effective rank. A derived privilege, not a third role; the ADR-012 contract (two `403` strings) stays byte-identical.
+2. ~~**Razorpay key**~~ — **resolved day-15 (ADR-014, Decide-6)**: a `rzp_test_` key is present in the gitignored local `.env`; CI stays key-less (ADR-010); the live round-trip is debt 16a.
 3. **Tier semantics**: is `starter` the only paid tier, or the first of a ladder? (Affects whether `plan_tier` is an enum or a rank.)
 4. **Home of the spec**: resolved 2026-10-10 — the PRD was split into this file (`taskflow-build.md`, the ledger) and `taskflow-product.md` (the spec), both under `docs_v2/product/taskflow/`. `docs/` is read-only v1 history, so `docs_v2/` is the home.
 5. ~~**The wire-level parity gap**~~ — **resolved 2026-10-10.** The three trailing zod response schemas (`workspace` + `plan_tier`/`created_at`, `project` + `created_at`, `issue` + `created_at`) now match the PY kitchen's key order; `workspaceMemberSchema` was left untouched (the PY member model has no `created_at`, so it was already at parity — the original "all four" framing over-counted). The golden matrix (`py/tests/test_types.py` + `ts/tests/types.test.ts`) now asserts the *serialized* wire shape in both tracks, so a serializer drift turns the fast suite red.
