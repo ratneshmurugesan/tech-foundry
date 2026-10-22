@@ -1,48 +1,47 @@
 // tests/razorpay.test.ts
 //
-// Parity twin of py/tests/test_razorpay.py (ADR-014, the day-12 feature).
+// Parity twin of py/tests/test_razorpay.py (ADR-014, ADR-015).
 // Cellars apart (ADR-010): every test is a pure function or a faked seam — no Postgres,
 // no network, no clock. The TS feeds the same inputs and asserts the same strings as the
 // py suite (8000 == 8001).
 //
-//   1. The state machine — `transition()` is the whole day. Only trial->paid->active is
-//      wired; every other (state, event) pair returns null (the named-but-not-wired
-//      transitions of the webhook day read as "refused" until they ship).
-//   2. The signature — `verifySignature()` is the ONE real-code seam. HMAC over
-//      order_id|payment_id; the amount is NOT part of it.
-//   3. The plan->role link — the day-10 ladder gains a plan_tier input. A free member
-//      stays read-only; a starter member lifts to owner; the default (undefined) leaves
-//      the ladder untouched.
+//   1. The state machine — `transition()` (fully wired, ADR-015). `paid` serves double
+//      duty (initial activation + recovery); the state table disambiguates.
+//   2. The event map — `EVENT_MAP`: Razorpay event.name -> machine event (static lookup).
+//   3. The signature — `verifySignature()` (client-side payment sig, ADR-014).
+//   4. The webhook signature — `verifyWebhookSignature()` (ADR-015, the day-16 seam).
+//   5. The plan->role link — the day-10 ladder gains a plan_tier input.
 //
-// The checkout/verify ROUTES (py suites 4 & 5) are TODO in the py file, so they are not
-// asserted here — the day's real-code seams (1-3) are the parity surface.
+// The checkout/verify/webhook ROUTES (py suites 6-8) are TODO in the py file, so they
+// are not asserted here — the day's real-code seams (1-5) are the parity surface.
 
 import { describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
-import { transition, verifySignature } from "../src/razorpay";
+import { transition, verifySignature, verifyWebhookSignature } from "../src/razorpay";
+import { EVENT_MAP } from "../src/constants";
 import { assertRole } from "../src/authorize";
 import { ForbiddenError } from "../src/errors";
 
 // ---------------------------------------------------------------------------
-// 1. The state machine
+// 1. The state machine (fully wired, ADR-015)
 // ---------------------------------------------------------------------------
 
 describe("1. The state machine (transition)", () => {
-    // The ONE wired transition is trial->paid->active. Everything else is a named-but-
-    // not-wired pair (the webhook day) and must read as "refused" (null).
+    // Full table: `paid` serves double duty (initial activation from trial, recovery
+    // from past_due). The state table disambiguates — no state-aware mapping needed.
     it.each([
-        ["trial", "paid", "active"],
-        ["trial", "payment_failed", null],
-        ["trial", "payment_recovered", null],
-        ["trial", "unsubscribe", null],
-        ["active", "payment_failed", null],
-        ["active", "payment_recovered", null],
-        ["active", "unsubscribe", null],
-        ["past_due", "payment_recovered", null],
-        ["past_due", "unsubscribe", null],
-        ["canceled", "paid", null],
-        ["canceled", "payment_recovered", null],
-        ["canceled", "unsubscribe", null],
+        ["trial", "paid", "active"],              // initial activation
+        ["trial", "payment_failed", null],        // trial can't jump to past_due
+        ["trial", "unsubscribe", "canceled"],    // any -> canceled
+        ["active", "paid", null],                 // already active; idempotent noop
+        ["active", "payment_failed", "past_due"], // the bounce
+        ["active", "unsubscribe", "canceled"],   // any -> canceled
+        ["past_due", "paid", "active"],           // recovery
+        ["past_due", "payment_failed", null],    // already past_due; noop
+        ["past_due", "unsubscribe", "canceled"], // any -> canceled
+        ["canceled", "paid", null],              // terminal — nothing leaves canceled
+        ["canceled", "payment_failed", null],    // terminal
+        ["canceled", "unsubscribe", null],       // terminal
     ] as [string, string, string | null][])(
         "transition(%s, %s) == %s",
         (state, event, expected) => {
@@ -52,7 +51,31 @@ describe("1. The state machine (transition)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. The signature
+// 2. The webhook event map (static lookup, ADR-015)
+// ---------------------------------------------------------------------------
+
+describe("2. The event map (EVENT_MAP)", () => {
+    it.each([
+        ["payment.captured", "paid"],
+        ["payment.failed", "payment_failed"],
+        ["refund.created", "unsubscribe"],
+        ["subscription.paid", "paid"],
+        ["subscription.halted", "payment_failed"],
+        ["subscription.cancelled", "unsubscribe"],
+    ] as [string, string][])(
+        "EVENT_MAP[%s] == %s",
+        (razorpayEvent, expected) => {
+            expect(EVENT_MAP[razorpayEvent]).toBe(expected);
+        }
+    );
+
+    it("an unknown event name is not in the map", () => {
+        expect(EVENT_MAP["some.unknown.event"]).toBeUndefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 3. The signature (client-side payment sig, ADR-014)
 // ---------------------------------------------------------------------------
 
 const SECRET = "secret";
@@ -63,7 +86,7 @@ function sign(orderId: string, paymentId: string, secret: string): string {
     return createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
 }
 
-describe("2. The signature (verifySignature)", () => {
+describe("3. The signature (verifySignature)", () => {
     it("accepts the correct signature", () => {
         const sig = sign("order_1", "pay_1", SECRET);
         expect(verifySignature("order_1", "pay_1", 49900, SECRET, sig)).toBe(true);
@@ -78,6 +101,40 @@ describe("2. The signature (verifySignature)", () => {
         // change the expected HMAC.
         const sig = sign("order_1", "pay_1", SECRET);
         expect(verifySignature("order_1", "pay_1", 999999, SECRET, sig)).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 4. The webhook signature (ADR-015, the day-16 real-code seam)
+//    Razorpay signs the EXACT request bytes: HMAC_SHA256(raw_body, webhook_secret).
+// ---------------------------------------------------------------------------
+
+function webhookSign(rawBody: Buffer, secret: string): string {
+    return createHmac("sha256", secret).update(rawBody).digest("hex");
+}
+
+describe("4. The webhook signature (verifyWebhookSignature)", () => {
+    const WH_SECRET = "wh_secret";
+    const body = Buffer.from('{"event":{"name":"payment.captured"}}');
+
+    it("accepts the correct signature", () => {
+        const sig = webhookSign(body, WH_SECRET);
+        expect(verifyWebhookSignature(body, WH_SECRET, sig)).toBe(true);
+    });
+
+    it("rejects a wrong signature", () => {
+        expect(verifyWebhookSignature(body, WH_SECRET, "deadbeef")).toBe(false);
+    });
+
+    it("rejects a wrong secret", () => {
+        const sig = webhookSign(body, WH_SECRET);
+        expect(verifyWebhookSignature(body, "wrong_secret", sig)).toBe(false);
+    });
+
+    it("rejects a tampered body", () => {
+        const sig = webhookSign(body, WH_SECRET);
+        const tampered = Buffer.from('{"event":{"name":"refund.created"}}');
+        expect(verifyWebhookSignature(tampered, WH_SECRET, sig)).toBe(false);
     });
 });
 

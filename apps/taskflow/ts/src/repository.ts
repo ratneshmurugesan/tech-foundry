@@ -176,7 +176,34 @@ class PostgresRepository {
         }
     }
 
-    async activatePlan(workspaceId: string): Promise<Plan | undefined> {
+    async findPlanByOrderId(razorpayOrderId: string): Promise<Plan | undefined> {
+        // Find a plan by its Razorpay order id (the webhook's lookup key).
+        const db = getDb()
+        const rows = await db.select({
+            id: paymentPlans.id,
+            workspace_id: paymentPlans.workspace_id,
+            state: paymentPlans.state,
+            razorpay_order_id: paymentPlans.razorpay_order_id,
+            created_at: paymentPlans.created_at
+        })
+        .from(paymentPlans)
+        .where(eq(paymentPlans.razorpay_order_id, razorpayOrderId))
+        .limit(1)
+        const row = rows[0]
+        if (!row) return undefined
+        return {
+            id: row.id,
+            workspace_id: row.workspace_id,
+            state: row.state ?? "trial",
+            razorpay_order_id: row.razorpay_order_id,
+            created_at: row.created_at as Date
+        }
+    }
+
+    async applyPlanTransition(workspaceId: string, event: string): Promise<Plan | undefined> {
+        // General plan state transition: find the plan, call transition(state, event),
+        // update the plan row + sync the workspace tier. Idempotent: if the (state, event)
+        // pair is not in the table, the plan is returned as-is (no DB write).
         const db = getDb()
 
         const rows = await db.select({
@@ -199,10 +226,7 @@ class PostgresRepository {
             razorpay_order_id: row.razorpay_order_id,
             created_at: row.created_at as Date
         }
-        // Wire the ONE transition of the day: trial -> active (the `paid` event). Idempotent:
-        // a plan that is not a valid transition source (already active, or canceled) is
-        // returned as-is. Mirrors py `activate_plan`.
-        const newState = transition(plan.state, "paid")
+        const newState = transition(plan.state, event)
         if (newState === null) {
             return plan
         }
@@ -215,9 +239,20 @@ class PostgresRepository {
                 .update(workspaces)
                 .set({ plan_tier: "starter" })
                 .where(eq(workspaces.id, workspaceId))
+        } else if (newState === "canceled") {
+            await db
+                .update(workspaces)
+                .set({ plan_tier: "free" })
+                .where(eq(workspaces.id, workspaceId))
         }
         plan.state = newState as Plan["state"]
         return plan
+    }
+
+    async activatePlan(workspaceId: string): Promise<Plan | undefined> {
+        // The day-15 convenience: trial -> active (the `paid` event). Delegates to the
+        // general applyPlanTransition. Mirrors py `activate_plan`.
+        return this.applyPlanTransition(workspaceId, "paid")
     }
 
     /* --- Projects --- */

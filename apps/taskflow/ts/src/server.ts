@@ -6,8 +6,8 @@ import { registerErrorHandler } from './errorHandler'
 import { DatabaseCrashError, ForbiddenError, NotFoundError, ServiceUnavailableError, VerificationError } from './errors'
 import { doorHook } from './auth'
 import { assertRole, authorizeHook } from './authorize';
-import { createOrder, verifySignature } from './razorpay';
-import { STARTER_AMOUNT_PAISE } from './constants';
+import { createOrder, verifySignature, verifyWebhookSignature, transition } from './razorpay';
+import { STARTER_AMOUNT_PAISE, EVENT_MAP } from './constants';
 import { Plan } from './types';
 
 const repo = new PostgresRepository()
@@ -26,6 +26,22 @@ const app = fastify
 
 // Registering custom semantic error handler
 registerErrorHandler(app)
+
+// Capture the raw body buffer for webhook signature verification (ADR-015, day-16).
+// The parsed JSON is still passed to done() so all existing routes are unaffected.
+declare module 'fastify' {
+    interface FastifyRequest {
+        rawBody?: Buffer
+    }
+}
+fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body: Buffer, done) => {
+    req.rawBody = body
+    try {
+        done(null, JSON.parse(body.toString('utf8')))
+    } catch (e) {
+        done(e as Error)
+    }
+})
 
 // --- Response schemas: the WIRE contract. The field SET + ORDER must match the PY kitchen
 //     byte-for-byte (the parity wall, ADR-001). `created_at` / `plan_tier` were added here
@@ -393,6 +409,67 @@ app.post("/workspaces/:id/billing/verify", {
         throw new VerificationError();
     }
     return activated
+})
+
+// --- Webhook: the Razorpay server-to-server callback (ADR-015, day-16). Public route —
+//     authenticated via HMAC signature over the raw body, not a JWT badge. Always returns
+//     200 (except 503/400) so Razorpay does not retry on business-logic no-ops.
+app.post("/webhooks/razorpay", async (request, response) => {
+    // Fail-closed on missing secret FIRST — before any parsing.
+    const secret = process.env["RAZORPAY_WEBHOOK_SECRET"]
+    if (!secret) {
+        throw new ServiceUnavailableError()
+    }
+
+    // Read the raw body bytes (needed for signature verification) + the signature header.
+    const rawBody = request.rawBody
+    const signature = request.headers["x-razorpay-signature"] as string | undefined
+    if (!rawBody || !signature) {
+        throw new VerificationError()
+    }
+
+    if (!verifyWebhookSignature(rawBody, secret, signature)) {
+        throw new VerificationError()
+    }
+
+    // Parse the event payload.
+    let payload: any
+    try {
+        payload = JSON.parse(rawBody.toString('utf8'))
+    } catch {
+        throw new VerificationError()
+    }
+
+    const eventName: string = payload.event ?? ""
+    const mappedEvent = EVENT_MAP[eventName]
+    if (!mappedEvent) {
+        return { status: "ignored", reason: `unknown event: ${eventName}` }
+    }
+
+    // Extract the order id from the payload (Razorpay nests it under data.<entity>).
+    const data = payload.data ?? {}
+    let orderId: string | undefined
+    for (const entityKey of ["payment", "order", "subscription"]) {
+        const entity = data[entityKey]
+        if (entity && typeof entity === "object") {
+            orderId = entity.order_id || entity.id
+            if (orderId) break
+        }
+    }
+
+    if (!orderId) {
+        return { status: "ignored", reason: "no order id in payload" }
+    }
+
+    // Look up the plan by its Razorpay order id.
+    const plan = await repo.findPlanByOrderId(orderId)
+    if (!plan || !plan.workspace_id) {
+        return { status: "no_plan", reason: `no plan for order ${orderId}` }
+    }
+
+    // Apply the transition (idempotent: no-op if the (state, event) pair is not wired).
+    const updated = await repo.applyPlanTransition(plan.workspace_id, mappedEvent)
+    return { status: "transitioned", plan: updated }
 })
 
 

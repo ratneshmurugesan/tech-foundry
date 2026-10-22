@@ -1,9 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { RAZORPAY_API, TRANSITIONS } from "./constants";
 
-// The plan state machine (ADR-014). Returns the next state, or null if the (state, event)
-// pair is not wired. Only trial->paid->active ships today; the named-but-not-wired
-// transitions (the webhook day) return null and read as "refused" until they ship.
+// The plan state machine (ADR-014, fully wired ADR-015). Returns the next state, or null
+// if the (state, event) pair is not in the table (the "refused" / no-op case).
 // Mirrors py `razorpay.py::transition`.
 export function transition(state: string, event: string): string | null {
     return TRANSITIONS[state]?.[event] ?? null;
@@ -24,6 +23,22 @@ export function verifySignature(
     const expected = createHmac("sha256", keySecret)
         .update(`${orderID}|${paymentID}`)
         .digest("hex");
+    const expectedBuf = Buffer.from(expected, "utf8");
+    const sigBuf = Buffer.from(signature, "utf8");
+    if (expectedBuf.length !== sigBuf.length) return false;
+    return timingSafeEqual(expectedBuf, sigBuf);
+}
+
+// The day-16 real-code seam (ADR-015): verify the server-side webhook signature
+// = HMAC_SHA256(rawBody, webhookSecret). Razorpay signs the EXACT request bytes (the raw
+// body, not a re-serialized JSON). Constant-time compare (no timing oracle). Pure.
+// Mirrors py `razorpay.py::verify_webhook_signature`.
+export function verifyWebhookSignature(
+    rawBody: Buffer,
+    secret: string,
+    signature: string
+): boolean {
+    const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
     const expectedBuf = Buffer.from(expected, "utf8");
     const sigBuf = Buffer.from(signature, "utf8");
     if (expectedBuf.length !== sigBuf.length) return false;

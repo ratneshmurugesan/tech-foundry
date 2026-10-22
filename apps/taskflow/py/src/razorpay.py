@@ -1,10 +1,11 @@
 """
-The Razorpay seam (ADR-014) — the cashier. Two pure hearts + one network call.
+The Razorpay seam (ADR-014) — the cashier. Three pure hearts + one network call.
 
-- `transition(state, event)`: the plan state machine. Only trial->active is wired today
-  (the `paid` event); the rest are named-but-not-wired (the webhook day) and read as None.
+- `transition(state, event)`: the plan state machine (fully wired, ADR-015).
 - `verify_signature(...)`: the client-side payment signature check (HMAC-SHA256 over
-  `order_id|payment_id`). Pure — the one real-code seam of the day.
+  `order_id|payment_id`). Pure.
+- `verify_webhook_signature(...)`: the server-side webhook signature check (HMAC-SHA256
+  over the RAW request body). Pure — the day-16 real-code seam.
 - `create_order(...)`: the ONE outbound network call (Razorpay order creation). Async.
 """
 import hashlib
@@ -16,9 +17,8 @@ from .constants import TRANSITIONS, RAZORPAY_API
 
 
 def transition(state: str, event: str) -> str | None:
-    """The plan state machine. Returns the next state, or None if the (state, event) pair
-    is not wired. Only trial->paid->active ships today; the named-but-not-wired transitions
-    (the webhook day) return None and read as "refused" until they ship."""
+    """The plan state machine (fully wired, ADR-015). Returns the next state, or None if
+    the (state, event) pair is not in the table (the "refused" / no-op case)."""
     return TRANSITIONS.get(state, {}).get(event)
 
 
@@ -27,6 +27,14 @@ def verify_signature(order_id: str, payment_id: str, amount: int, secret: str, s
     `amount` is accepted for parity with the order but is NOT part of the payment signature.
     Constant-time compare (no timing oracle)."""
     expected = hmac.new(secret.encode(), f"{order_id}|{payment_id}".encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+
+def verify_webhook_signature(raw_body: bytes, secret: str, signature: str) -> bool:
+    """Verify the server-side webhook signature = HMAC_SHA256(raw_body, webhook_secret).
+    Razorpay signs the EXACT request bytes (the raw body, not a re-serialized JSON).
+    Constant-time compare (no timing oracle). Pure — no network, no DB."""
+    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
 
 

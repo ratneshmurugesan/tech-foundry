@@ -397,10 +397,22 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def activate_plan(self, workspace_id: str) -> Plan | None:
-        # Wire the ONE transition of the day: trial -> active (the `paid` event), and
-        # lift the workspace's tier to the paid product. Idempotent: a plan that is not
-        # a valid transition source (e.g. already active, or canceled) is returned as-is.
+    async def find_plan_by_order_id(self, razorpay_order_id: str) -> Plan | None:
+        # Find a plan by its Razorpay order id (the webhook's lookup key).
+        session = await get_session()
+        try:
+            result = await session.execute(
+                select(PaymentPlansModel).where(PaymentPlansModel.razorpay_order_id == razorpay_order_id)
+            )
+            row = result.scalar_one_or_none()
+            return Plan.model_validate(row) if row else None
+        finally:
+            await session.close()
+
+    async def apply_plan_transition(self, workspace_id: str, event: str) -> Plan | None:
+        # General plan state transition: find the plan, call transition(state, event),
+        # update the plan row + sync the workspace tier. Idempotent: if the (state, event)
+        # pair is not in the table, the plan is returned as-is (no DB write).
         session = await get_session()
         try:
             result = await session.execute(
@@ -409,16 +421,25 @@ class PostgresRepository:
             plan = result.scalar_one_or_none()
             if plan is None:
                 return None
-            new_state = transition(plan.state, "paid")
+            new_state = transition(plan.state, event)
             if new_state is None:
-                return plan
+                return Plan.model_validate(plan)
             plan.state = new_state
             if new_state == "active":
                 ws = await session.get(WorkspaceModel, workspace_id)
                 if ws is not None:
                     ws.plan_tier = "starter"
+            elif new_state == "canceled":
+                ws = await session.get(WorkspaceModel, workspace_id)
+                if ws is not None:
+                    ws.plan_tier = "free"
             await session.commit()
             await session.refresh(plan)
             return Plan.model_validate(plan)
         finally:
             await session.close()
+
+    async def activate_plan(self, workspace_id: str) -> Plan | None:
+        # The day-15 convenience: trial -> active (the `paid` event). Delegates to the
+        # general apply_plan_transition. Mirrors ts `activatePlan`.
+        return await self.apply_plan_transition(workspace_id, "paid")

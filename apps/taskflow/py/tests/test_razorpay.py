@@ -1,5 +1,5 @@
 """
-Day-15 — Razorpay checkout suite (ADR-014).
+Day-15/16 — Razorpay checkout + webhook suite (ADR-014, ADR-015).
 
 ADR-010: zero-service. conftest points DATABASE_URL at port 9 (deterministically
 refused), so no Postgres; no Razorpay key is read; no Auth0 (doorless). The pure
@@ -10,18 +10,22 @@ Parity: the TS sibling (tests/razorpay.test.ts) feeds the same inputs and assert
 same two new strings (8000 == 8001).
 
 Suites:
-  1. state machine   — transition(): trial->active wired; the rest named-not-wired; canceled terminal
-  2. sig verify      — verify_signature(): right sig True, wrong sig False
-  3. plan->role      — assert_role(..., plan_tier): free member read-only, starter member may write
-  4. checkout route  — faked Razorpay -> 201 pending plan (zero services)   [INTEGRATION - TODO]
-  5. inspector       — no-key -> 503; dead-cellar plans read -> 500          [INTEGRATION - TODO]
+  1. state machine       — transition(): full table (ADR-015); canceled terminal
+  2. event map           — EVENT_MAP: Razorpay event.name -> machine event (static lookup)
+  3. sig verify          — verify_signature(): right sig True, wrong sig False
+  4. webhook sig verify  — verify_webhook_signature(): HMAC over raw body (ADR-015)
+  5. plan->role          — assert_role(..., plan_tier): free member read-only, starter member may write
+  6. checkout route      — faked Razorpay -> 201 pending plan (zero services)   [INTEGRATION - TODO]
+  7. inspector           — no-key -> 503; dead-cellar plans read -> 500          [INTEGRATION - TODO]
+  8. webhook route       — POST /webhooks/razorpay (faked sig, faked cellar)     [INTEGRATION - TODO]
 """
 import hashlib
 import hmac
 
 import pytest
 
-from src.razorpay import transition, verify_signature
+from src.razorpay import transition, verify_signature, verify_webhook_signature
+from src.constants import EVENT_MAP
 from src.authorize import assert_role
 from src.errors import ForbiddenError
 from src.types import WorkspaceMember
@@ -30,26 +34,29 @@ WS, SUB = "w-1", "u-1"
 
 
 # --------------------------------------------------------------------------- #
-# 1. The plan state machine — pure, the unit-testable heart (spec 2.1)
+# 1. The plan state machine — pure, the unit-testable heart (ADR-015, fully wired)
 # --------------------------------------------------------------------------- #
-# Wired today: trial --paid--> active.  Named-but-NOT-wired (webhook day):
-# active->past_due, past_due->active, any->canceled.  `transition` returns None
-# for anything not wired, so the named ones read as "refused" until they ship.
+# Full table: trial+paid->active, trial+unsubscribe->canceled,
+#             active+payment_failed->past_due, active+unsubscribe->canceled,
+#             past_due+paid->active (recovery), past_due+unsubscribe->canceled,
+#             canceled = terminal (no outgoing edges).
+# `paid` serves double duty: initial activation (from trial) AND recovery (from past_due).
+# The state table disambiguates — no state-aware mapping needed.
 @pytest.mark.parametrize(
     ("state", "event", "expected"),
     [
-        ("trial", "paid", "active"),              # the ONE wired transition of the day
-        ("trial", "payment_failed", None),        # trial can't jump to past_due
-        ("trial", "payment_recovered", None),
-        ("trial", "unsubscribe", None),
-        ("active", "payment_failed", None),       # named, not wired today
-        ("active", "payment_recovered", None),
-        ("active", "unsubscribe", None),
-        ("past_due", "payment_recovered", None),  # named, not wired today
-        ("past_due", "unsubscribe", None),
+        ("trial", "paid", "active"),               # initial activation
+        ("trial", "payment_failed", None),         # trial can't jump to past_due
+        ("trial", "unsubscribe", "canceled"),     # any -> canceled
+        ("active", "paid", None),                  # already active; idempotent noop
+        ("active", "payment_failed", "past_due"),  # the bounce
+        ("active", "unsubscribe", "canceled"),    # any -> canceled
+        ("past_due", "paid", "active"),            # recovery
+        ("past_due", "payment_failed", None),     # already past_due; noop
+        ("past_due", "unsubscribe", "canceled"),  # any -> canceled
         ("canceled", "paid", None),               # terminal — nothing leaves canceled
-        ("canceled", "payment_recovered", None),
-        ("canceled", "unsubscribe", None),
+        ("canceled", "payment_failed", None),     # terminal
+        ("canceled", "unsubscribe", None),        # terminal
     ],
 )
 def test_state_machine(state, event, expected):
@@ -57,7 +64,31 @@ def test_state_machine(state, event, expected):
 
 
 # --------------------------------------------------------------------------- #
-# 2. Signature verify — the ONE real-code seam (spec 2.4)
+# 2. The webhook event map — static lookup (ADR-015)
+#    Razorpay event.name -> our machine event. The state table disambiguates.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("razorpay_event", "expected"),
+    [
+        ("payment.captured", "paid"),
+        ("payment.failed", "payment_failed"),
+        ("refund.created", "unsubscribe"),
+        ("subscription.paid", "paid"),
+        ("subscription.halted", "payment_failed"),
+        ("subscription.cancelled", "unsubscribe"),
+    ],
+)
+def test_event_map(razorpay_event, expected):
+    assert EVENT_MAP[razorpay_event] == expected
+
+
+def test_event_map_unknown_event_not_in_map():
+    # An unknown event name is not in the map; the handler treats it as "ignored".
+    assert "some.unknown.event" not in EVENT_MAP
+
+
+# --------------------------------------------------------------------------- #
+# 3. Signature verify — the client-side payment signature (ADR-014)
 #    Razorpay's client-side payment sig = HMAC_SHA256(f"{order_id}|{payment_id}", key_secret).
 # --------------------------------------------------------------------------- #
 def _sig(order_id: str, payment_id: str, secret: str) -> str:
@@ -83,7 +114,41 @@ def test_verify_signature_rejects_wrong_amount_is_not_used():
 
 
 # --------------------------------------------------------------------------- #
-# 3. plan -> role — the conceptual spine (spec 2.5)
+# 4. Webhook signature verify — the day-16 real-code seam (ADR-015)
+#    Razorpay signs the EXACT request bytes: HMAC_SHA256(raw_body, webhook_secret).
+# --------------------------------------------------------------------------- #
+def _webhook_sig(raw_body: bytes, secret: str) -> str:
+    return hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+
+
+def test_webhook_sig_accepts_correct():
+    secret = "wh_secret"
+    body = b'{"event":{"name":"payment.captured"}}'
+    sig = _webhook_sig(body, secret)
+    assert verify_webhook_signature(body, secret, sig) is True
+
+
+def test_webhook_sig_rejects_wrong_signature():
+    body = b'{"event":{"name":"payment.captured"}}'
+    assert verify_webhook_signature(body, "wh_secret", "deadbeef") is False
+
+
+def test_webhook_sig_rejects_wrong_secret():
+    body = b'{"event":{"name":"payment.captured"}}'
+    sig = _webhook_sig(body, "wh_secret")
+    assert verify_webhook_signature(body, "wrong_secret", sig) is False
+
+
+def test_webhook_sig_rejects_tampered_body():
+    secret = "wh_secret"
+    body = b'{"event":{"name":"payment.captured"}}'
+    sig = _webhook_sig(body, secret)
+    tampered = b'{"event":{"name":"refund.created"}}'
+    assert verify_webhook_signature(tampered, secret, sig) is False
+
+
+# --------------------------------------------------------------------------- #
+# 5. plan -> role — the conceptual spine (spec 2.5)
 #    free  -> member is read-only (rank 1)  ;  starter -> member's effective rank lifts to owner.
 #    A defaulted plan_tier=None must leave the ADR-012 ladder untouched (F3).
 # --------------------------------------------------------------------------- #

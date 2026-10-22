@@ -11,9 +11,9 @@ from .error_handlers import register_error_handlers
 from .errors import DatabaseCrashError, ConflictError, NotFoundError, ServiceUnavailableError, VerificationError
 from .auth import AuthenticateBadgeMiddleware
 from .authorize import AuthorizeMiddleware, _sub, assert_role
-from .constants import STARTER_AMOUNT_PAISE
+from .constants import STARTER_AMOUNT_PAISE, EVENT_MAP
 
-from.razorpay import create_order, verify_signature
+from .razorpay import create_order, verify_signature, verify_webhook_signature, transition
 
 __all__ = ["app"]
 
@@ -229,7 +229,60 @@ async def verify_payment(id: str, body: VerifyPaymentRequest, request: Request):
 
     # Wire the ONE transition of the day: trial -> active (idempotent if already active).
     return await repo.activate_plan(id)
-    
+
+@app.post("/webhooks/razorpay", status_code=200)
+async def razorpay_webhook(request: Request):
+    """The Razorpay webhook (ADR-015, day-16). Public route — authenticated via HMAC
+    signature over the raw body, not a JWT badge. Always returns 200 (except 503/400)
+    so Razorpay does not retry on business-logic no-ops."""
+    # Fail-closed on missing secret FIRST — before any parsing.
+    secret = os.environ.get("RAZORPAY_WEBHOOK_SECRET")
+    if not secret:
+        raise ServiceUnavailableError()
+
+    # Read the raw body bytes (needed for signature verification) + the signature header.
+    raw_body = await request.body()
+    signature = request.headers.get("x-razorpay-signature")
+    if not signature:
+        raise VerificationError()
+
+    if not verify_webhook_signature(raw_body, secret, signature):
+        raise VerificationError()
+
+    # Parse the event payload.
+    import json
+    try:
+        payload = json.loads(raw_body)
+    except (json.JSONDecodeError, ValueError):
+        raise VerificationError()
+
+    event_name = payload.get("event", "")
+    mapped_event = EVENT_MAP.get(event_name)
+    if mapped_event is None:
+        return {"status": "ignored", "reason": f"unknown event: {event_name}"}
+
+    # Extract the order id from the payload (Razorpay nests it under data.<entity>).
+    data = payload.get("data", {})
+    order_id = None
+    for entity_key in ("payment", "order", "subscription"):
+        entity = data.get(entity_key)
+        if isinstance(entity, dict):
+            order_id = entity.get("order_id") or entity.get("id")
+            if order_id:
+                break
+
+    if not order_id:
+        return {"status": "ignored", "reason": "no order id in payload"}
+
+    # Look up the plan by its Razorpay order id.
+    plan = await repo.find_plan_by_order_id(order_id)
+    if plan is None or plan.workspace_id is None:
+        return {"status": "no_plan", "reason": f"no plan for order {order_id}"}
+
+    # Apply the transition (idempotent: no-op if the (state, event) pair is not wired).
+    updated = await repo.apply_plan_transition(plan.workspace_id, mapped_event)
+    return {"status": "transitioned", "plan": updated.model_dump()}
+
 @app.get("/projects")
 async def get_projects(request: Request) -> List[Project]:
     sub = _sub(request)
