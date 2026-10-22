@@ -55,7 +55,7 @@ Three layers, in order. **A request must clear all three.** *(Grounded in `auth.
 
 ## 2. The plan & the money (the seam, and the next build)
 
-This is where TaskFlow stops being a toy and becomes a *business*. It has two parts — **both shipped (day-15)**; the webhook-driven transitions are next.
+This is where TaskFlow stops being a toy and becomes a *business*. It has three parts — the **checkout** (day-15) and the **webhook** (day-16) — **all shipped**; the live round-trip is the named debt (16a).
 
 ### 2.1 Shipped: the plan tier column
 `workspaces.plan_tier` exists on **both** tracks (`free | starter`, default `free`). It is the *data* half of the story — and since day-15 the *other* half reads it: the authorizer's plan→role link (ADR-014, Decide-4) couples the tier to the role ladder. The tier is **system-managed**: only the plan state machine (the checkout) writes it; it is never client-settable.
@@ -68,7 +68,7 @@ This is where TaskFlow stops being a toy and becomes a *business*. It has two pa
 
 The RBAC layer was *built to unlock exactly this*. **Wired day-15 (ADR-014, Decide-4)**: the `plan_tier` input inside `assert_role`/`assertRole` — free member read-only, starter member may write — so the money story *compounds* instead of the two decoupling.
 
-### 2.3 Shipped (day-15): the plan state machine + Razorpay checkout
+### 2.3 Shipped: the plan state machine (fully wired, day-16) + the Razorpay checkout (day-15)
 The full subscription lifecycle, modeled on **Ghost's content-states**:
 
 ```
@@ -79,6 +79,13 @@ trial  →  active  →  past_due  →  canceled
 - **Create order** → **verify payment** (Razorpay; HMAC/SHA-256 signature check — a *pure* function, faked in tests).
 - **The cashier sits *above* the door and the key-ring** — it reuses the *same* `sub` the authorizer reads and the *same* ADR-012 authorizer, so a stranger is stopped at the door (`401`) and a non-owner before the money leaves (`403`). The reader, the door, the 401/403 contracts, and the lighthouse set stay **untouched**.
 - **The testable core is pure** (no network, cellar): the state machine transitions + the signature verify. The *live* round-trip (real order, real webhook) is the local bar — the **named debt** class, mirroring ADR-011's live-JWKS.
+
+### 2.4 Shipped (day-16): the webhook — the ledger's full life (ADR-015)
+- **A public route** (`/webhooks/razorpay`) that *bypasses the door* — Razorpay calls it without a badge; it authenticates by **HMAC-SHA256 over the raw body** (a second, sealed-delivery auth, distinct from the JWT door; the door stays untouched for every other route).
+- **The event map** — a static lookup from Razorpay `event.name` → machine event; the state table disambiguates (`trial+paid`=activate, `past_due+paid`=recover).
+- **All three ADR-014 edges now fire**: `active→past_due` (`payment.failed`), `past_due→active` (recovery), `any→canceled` (unsubscribe); `canceled` is terminal.
+- **Idempotent + always-200** (except `503` unkeyed / `400` bad sig) so Razorpay never retries a business no-op; the tier syncs (`active→starter`, `canceled→free`, `past_due→keep`).
+- **Fail-closed**: missing `RAZORPAY_WEBHOOK_SECRET` → `503`; missing/bad signature → `400`. The *live* delivery (a real test-mode event) is debt 16a.
 
 ---
 
@@ -123,15 +130,18 @@ flowchart LR
     ROUTE["Waiter<br/>routes"]
     CHEF["Chef<br/>business logic"]
     CASH["Cashier<br/>Razorpay (shipped)"]
+    WEBHOOK["Webhook<br/>Razorpay (shipped)"]
   end
   CELLAR[("Cellar<br/>Postgres")]
   C -->|Bearer jwt| DOOR --> KEYS --> ROUTE --> CHEF --> CELLAR
   ROUTE -.-> CASH
+  C -.->|sealed delivery| WEBHOOK
+  WEBHOOK -.-> CELLAR
 ```
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-10-19)
+## 5. What's built vs. what's next (honest state, 2026-10-22)
 
 | Capability | State |
 |---|---|
@@ -142,9 +152,10 @@ flowchart LR
 | **Wire-level response parity** (identical JSON, both kitchens) | ✅ **closed 2026-10-10** — the three trailing zod schemas now match the PY key order; the member was already at parity; the golden matrix asserts the serialized shape in both tracks |
 | Plan tier column (`free`/`starter`) | ✅ shipped (system-managed; the authorizer reads it — §2.1) |
 | **Plan tier → role capability** (free=read-only, paid=write) | ✅ shipped day-15 (ADR-014 — the `plan_tier` input inside `assert_role`; a derived privilege, not a third role) |
-| **Plan state machine** (trial→active→past_due→canceled) | ✅ shipped day-15 (pure, tested) — only `trial→active` wired; the other edges ship with the webhook day (debt 16b) |
+| **Plan state machine** (trial→active→past_due→canceled) | ✅ **fully wired day-16** (pure, tested) — all three edges fire via the webhook (ADR-015) |
 | **Razorpay checkout** (create order, verify payment) | ✅ shipped day-15 (ADR-014) |
-| Webhook / subscription lifecycle (live) | ⏳ named debt (live-Razorpay class) |
+| **Webhook route** (sealed-delivery auth, event map, always-200) | ✅ shipped day-16 (ADR-015) |
+| Webhook / subscription lifecycle (**live** round-trip) | ⏳ named debt 16a (live-Razorpay class) |
 | UI in a browser (Sprint 3) | ⏳ ahead |
 | Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) | ⏳ ahead |
 

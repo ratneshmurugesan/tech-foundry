@@ -10,10 +10,10 @@
 
 ## NOW
 *(derived on every run — never hand-edited)*
-- last: day-15 (2026-10-18 — razorpay-checkout) → notes/day-15-razorpay-checkout-2026-10-18-1921.md
+- last: day-16 (2026-10-22 — razorpay-webhooks) → notes/day-16-razorpay-webhooks-2026-10-22-1435.md
 - git: dev
-- open debts: 14a · 16a · 16b → debt.md (triggers, not dates)
-- next: Webhook-driven plan transitions — Next — active→past_due / past_due→active / any→canceled, both tracks; the edges are named in the ADR-014 state machine but not wired (Decide-7). The live Razorpay round-trip (16a) rides along when a real charge is wanted. … → roadmap §16 (../docs/roadmaps/v4/master.md)
+- open debts: 14a · 16a → debt.md (triggers, not dates)
+- next: Live Razorpay round-trip (16a) — a real rzp_test_ order + a real webhook event against a running env; the wiring is done and tested with fakes, the live delivery rides along when a real charge is wanted. … → roadmap §16 (../docs/roadmaps/v4/master.md)
 
 ## Docs map (everything in this tree)
 - [README](README.md): what lives where + the EOD procedure
@@ -26,10 +26,12 @@
 - [AGENTS.md](../AGENTS.md): the session-start pointer (rules 1/4) — a new agent session reads this first
 
 ## ADRs (newest first — *status tells you whether it's still law*)
+- [ADR-015 razorpay-webhooks](adrs/adr-015-razorpay-webhooks.md): *status: Active*
 - [ADR-014 razorpay-checkout](adrs/adr-014-razorpay-checkout.md): *status: Active*
 - [ADR-013 docs-v2-home](adrs/adr-013-docs-v2-home.md): *status: Active*
 
 ## Day notes (newest first)
+- [day-16-razorpay-webhooks](notes/day-16-razorpay-webhooks-2026-10-22-1435.md): *2026-10-22*
 - [day-15-razorpay-checkout](notes/day-15-razorpay-checkout-2026-10-18-1921.md): *2026-10-18*
 - [day-14-razorpay-checkout](notes/day-14-razorpay-checkout-2026-10-09-1708.md): *2026-10-09*
 - [day-13-docs-v2-home](notes/day-13-docs-v2-home-2026-10-03-2130.md): *2026-10-03*

@@ -759,14 +759,15 @@ We move on: Next deepening
 
 ## 16. Current Status & Next Steps
 
-### Where We Are (last updated 2026-10-18, through Day 15 — the razorpay checkout landed):
+### Where We Are (last updated 2026-10-22, through Day 16 — the razorpay webhooks landed, the ledger's full life):
 - ✅ v1 era complete: dual-language API, Postgres, deploy, CI, Auth0 door, workspace RBAC (`docs/` notes/adrs — v1-era history)
 - ✅ Dual-day feature parity established (ADR-101): the golden matrix is the shared source of truth
 - ✅ **v2 docs regime live** (ADR-013, day-13): `docs_v2/` = `debt.md` (one row per debt, no dates) + `llms.txt` (generated) + the 6-step EOD; the 2026-09-13/30 throwaway rehearsals deleted
-- ✅ **Razorpay checkout** (ADR-014, day-15): the cashier + plan ledger + plan→role link, both kitchens — the money path is live; the live round-trip + webhook transitions are now the named debts 16a/16b
+- ✅ **Razorpay checkout** (ADR-014, day-15): the cashier + plan ledger + plan→role link, both kitchens — the money path is live
+- ✅ **Razorpay webhooks** (ADR-015, day-16): the ledger's full life — the three ADR-014 edges wired (`active→past_due` / `past_due→active` / `any→canceled`), the sealed-delivery route, the event map, both kitchens; the live round-trip is the single named debt 16a
 
 ### What's Next:
-1. **Webhook-driven plan transitions — `Next`** — `active→past_due` / `past_due→active` / `any→canceled`, both tracks; the edges are *named* in the ADR-014 state machine but not wired (Decide-7). The live Razorpay round-trip (16a) rides along when a real charge is wanted.
+1. **Live Razorpay round-trip (16a)** — a real `rzp_test_` order + a real webhook event against a running env; the wiring is done and tested with fakes, the *live* delivery rides along when a real charge is wanted.
 2. Un-claimed small: 14a's README live-URL banner (`docs_v2/debt.md` row), owed to the next README touch.
 
 ---
