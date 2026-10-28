@@ -39,6 +39,14 @@ services:
       CI: "true" # Fix: Tells pnpm to bypass the interactive TTY confirmation prompt
       AUTH0_DOMAIN: dev-qr8x8ecg3nfb603i.uk.auth0.com
       AUTH0_AUDIENCE: https://dev-qr8x8ecg3nfb603i.uk.auth0.com/api/v2/
+    env_file:
+      # The gitignored .env feeds the RAZORPAY_* keys (ADR-014/015) into the container —
+      # the app reads process env directly and loads no dotenv itself, so without this
+      # the money routes could never see the keys in a compose run. `required: false`
+      # keeps a fresh-clone `up` working: no .env -> no keys -> the money routes fail
+      # closed to 503 (the designed behavior), everything else untouched.
+      - path: ts/.env
+        required: false
     volumes: 
       - ./ts:/app
       - ./ts/node_modules:/app/node_modules:cached
@@ -70,6 +78,14 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/taskflow
       AUTH0_DOMAIN: dev-qr8x8ecg3nfb603i.uk.auth0.com
       AUTH0_AUDIENCE: https://dev-qr8x8ecg3nfb603i.uk.auth0.com/api/v2/
+    env_file:
+      # The gitignored .env feeds the RAZORPAY_* keys (ADR-014/015) into the container —
+      # the app reads process env directly and loads no dotenv itself, so without this
+      # the money routes could never see the keys in a compose run. `required: false`
+      # keeps a fresh-clone `up` working: no .env -> no keys -> the money routes fail
+      # closed to 503 (the designed behavior), everything else untouched.
+      - path: py/.env
+        required: false
     volumes:
       # Mounts local Python working directory into the container
       - ./py:/app
