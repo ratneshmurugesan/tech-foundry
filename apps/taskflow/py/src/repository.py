@@ -392,7 +392,10 @@ class PostgresRepository:
             result = await session.execute(
                 select(PaymentPlansModel).where(PaymentPlansModel.workspace_id == workspace_id)
             )
-            row = result.scalar_one_or_none()
+            # First-row, not scalar_one_or_none(): a workspace that checks out twice
+            # has two plan rows, and one_or_none() would raise MultipleResultsFound -> 500.
+            # .scalars().first() mirrors ts findPlan's .limit(1) + rows[0] (the parity wall).
+            row = result.scalars().first()
             return Plan.model_validate(row) if row else None
         finally:
             await session.close()
@@ -418,7 +421,9 @@ class PostgresRepository:
             result = await session.execute(
                 select(PaymentPlansModel).where(PaymentPlansModel.workspace_id == workspace_id)
             )
-            plan = result.scalar_one_or_none()
+            # First-row, not scalar_one_or_none(): same duplicate-plan-row guard as
+            # find_plan — mirrors ts applyPlanTransition's .limit(1) + rows[0].
+            plan = result.scalars().first()
             if plan is None:
                 return None
             new_state = transition(plan.state, event)
