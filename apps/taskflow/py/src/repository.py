@@ -369,10 +369,25 @@ class PostgresRepository:
             await session.close()
 
     async def mint_plan(self, workspace_id: str, razorpay_order_id: str) -> Plan:
-        # Mint the pending (trial) plan bound to the workspace, recording the Razorpay
-        # order id. Returns the Plan so the checkout route can echo it back.
+        # Idempotent: if a `trial` plan already exists for this workspace, re-point
+        # its razorpay_order_id to the new order instead of inserting a 2nd row.
+        # A workspace that checks out twice keeps exactly one plan row (debt 16c).
         session = await get_session()
         try:
+            result = await session.execute(
+                select(PaymentPlansModel).where(
+                    and_(
+                        PaymentPlansModel.workspace_id == workspace_id,
+                        PaymentPlansModel.state == "trial",
+                    )
+                )
+            )
+            existing = result.scalars().first()
+            if existing:
+                existing.razorpay_order_id = razorpay_order_id
+                await session.commit()
+                await session.refresh(existing)
+                return Plan.model_validate(existing)
             model = PaymentPlansModel(
                 id=generate_id(),
                 workspace_id=workspace_id,

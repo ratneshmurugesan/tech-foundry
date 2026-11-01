@@ -279,6 +279,8 @@ docker compose up                 # 🐳 starts Taskflow + cellar (postgres) loc
 # → TypeScript kitchen: http://localhost:8001
 ```
 
+> **🌐 Live:** [`https://taskflow.ratnesh-foundry.space/`](https://taskflow.ratnesh-foundry.space/) (py) · `/_/ts/` (ts, TBD) — served through a Cloudflare tunnel (outbound dial; no inbound ports on the box). The cellar is **doorless** (ADR-008); you reach the data through the kitchens, never through a port.
+
 (Both kitchens talk to **one shared cellar**. A `README` of the *live* cloud deploy is in the day-6 note. When a second app is cast — e-commerce, healthcare, content, or analytics — it follows the same pattern, on its own ports, in `apps/<name>`.)
 
 ---

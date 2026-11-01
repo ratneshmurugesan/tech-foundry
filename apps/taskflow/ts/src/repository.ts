@@ -132,6 +132,32 @@ class PostgresRepository {
     async mintPlan(workspaceId: string, razorpayOrderId: string): Promise<Plan> {
         const db = getDb()
 
+        // Idempotent: if a `trial` plan already exists for this workspace, re-point
+        // its razorpay_order_id to the new order instead of inserting a 2nd row.
+        // A workspace that checks out twice keeps exactly one plan row (debt 16c).
+        const existing = await db
+        .select()
+        .from(paymentPlans)
+        .where(and(eq(paymentPlans.workspace_id, workspaceId), eq(paymentPlans.state, "trial")))
+        .limit(1)
+        const existingRow = existing[0]
+
+        if (existingRow) {
+            const updated = await db
+            .update(paymentPlans)
+            .set({ razorpay_order_id: razorpayOrderId })
+            .where(eq(paymentPlans.id, existingRow.id))
+            .returning()
+            const row = updated[0]
+            return {
+                id: row.id,
+                workspace_id: row.workspace_id,
+                razorpay_order_id: row.razorpay_order_id,
+                state: row.state ?? "trial",
+                created_at: row.created_at as Date
+            }
+        }
+
         const rows = await db
         .insert(paymentPlans)
         .values({
