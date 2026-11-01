@@ -12,7 +12,7 @@
 *(derived on every run — never hand-edited)*
 - last: day-16 (2026-10-22 — razorpay-webhooks) → notes/day-16-razorpay-webhooks-2026-10-22-1435.md
 - git: dev
-- open debts: 14a · 16a → debt.md (triggers, not dates)
+- open debts: 14a · 16a · 16c → debt.md (triggers, not dates)
 - next: Live Razorpay round-trip (16a) — a real rzp_test_ order + a real webhook event against a running env; the wiring is done and tested with fakes, the live delivery rides along when a real charge is wanted. … → roadmap §16 (../docs/roadmaps/v4/master.md)
 
 ## Docs map (everything in this tree)
