@@ -45,6 +45,27 @@ export function verifyWebhookSignature(
     return timingSafeEqual(expectedBuf, sigBuf);
 }
 
+// Pull the Razorpay order id out of a parsed webhook payload. Pure. Mirrors py
+// `razorpay.py::extract_order_id`. Razorpay nests the entity under
+// `payload.<type>.entity` (e.g. `payload.payment.entity.order_id`). We tolerate the
+// `data` wrapper and a non-`entity`-wrapped object too, so a shape drift can never
+// silently no-op the handler (the day-16 live round-trip caught exactly that).
+// Returns null when no order id is present — the handler then answers a 200 no-op.
+export function extractOrderId(payload: any): string | null {
+    for (const wrapperKey of ["payload", "data"]) {
+        const wrapper = payload?.[wrapperKey];
+        if (!wrapper || typeof wrapper !== "object") continue;
+        for (const entityKey of ["payment", "order", "subscription"]) {
+            const node = wrapper[entityKey];
+            if (!node || typeof node !== "object") continue;
+            const entity = (node.entity && typeof node.entity === "object") ? node.entity : node;
+            const orderId = entity.order_id || entity.id;
+            if (orderId) return orderId;
+        }
+    }
+    return null;
+}
+
 // The ONE outbound network call (Razorpay order creation). `fetchImpl` is injectable so
 // tests can fake the cashier without a network (the py monkeypatches httpx.AsyncClient).
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;

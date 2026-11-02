@@ -13,7 +13,7 @@ from .auth import AuthenticateBadgeMiddleware
 from .authorize import AuthorizeMiddleware, _sub, assert_role
 from .constants import STARTER_AMOUNT_PAISE, EVENT_MAP
 
-from .razorpay import create_order, verify_signature, verify_webhook_signature, transition
+from .razorpay import create_order, verify_signature, verify_webhook_signature, transition, extract_order_id
 
 __all__ = ["app"]
 
@@ -261,16 +261,9 @@ async def razorpay_webhook(request: Request):
     if mapped_event is None:
         return {"status": "ignored", "reason": f"unknown event: {event_name}"}
 
-    # Extract the order id from the payload (Razorpay nests it under data.<entity>).
-    data = payload.get("data", {})
-    order_id = None
-    for entity_key in ("payment", "order", "subscription"):
-        entity = data.get(entity_key)
-        if isinstance(entity, dict):
-            order_id = entity.get("order_id") or entity.get("id")
-            if order_id:
-                break
-
+    # Extract the order id (Razorpay nests it under payload.<type>.entity; the helper
+    # is defensive about the wrapper key and the entity wrap — see extract_order_id).
+    order_id = extract_order_id(payload)
     if not order_id:
         return {"status": "ignored", "reason": "no order id in payload"}
 

@@ -17,7 +17,7 @@
 
 import { describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
-import { transition, verifySignature, verifyWebhookSignature } from "../src/razorpay";
+import { transition, verifySignature, verifyWebhookSignature, extractOrderId } from "../src/razorpay";
 import { EVENT_MAP } from "../src/constants";
 import { assertRole } from "../src/authorize";
 import { ForbiddenError } from "../src/errors";
@@ -135,6 +135,43 @@ describe("4. The webhook signature (verifyWebhookSignature)", () => {
         const sig = webhookSign(body, WH_SECRET);
         const tampered = Buffer.from('{"event":{"name":"refund.created"}}');
         expect(verifyWebhookSignature(tampered, WH_SECRET, sig)).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Order-id extraction — the day-16 live-round-trip regression (ADR-015)
+//    Razorpay nests the entity under payload.<type>.entity. The handler must find the
+//    order id there (and tolerate the legacy `data` wrapper + a non-entity wrap), or it
+//    silently no-ops. Pure — no cellar, no network. Parity twin of py suite 6.
+// ---------------------------------------------------------------------------
+
+describe("6. Order-id extraction (extractOrderId)", () => {
+    it("resolves the real nested shape (payload.payment.entity.order_id)", () => {
+        const payload = { event: { name: "payment.captured" },
+            payload: { payment: { entity: { order_id: "order_abc", id: "pay_abc" } } } };
+        expect(extractOrderId(payload)).toBe("order_abc");
+    });
+
+    it("tolerates the legacy `data` wrapper", () => {
+        const payload = { event: { name: "payment.captured" },
+            data: { payment: { entity: { order_id: "order_abc" } } } };
+        expect(extractOrderId(payload)).toBe("order_abc");
+    });
+
+    it("tolerates an unwrapped entity (no `entity` key)", () => {
+        const payload = { event: { name: "payment.captured" },
+            payload: { payment: { order_id: "order_abc" } } };
+        expect(extractOrderId(payload)).toBe("order_abc");
+    });
+
+    it("falls back to the entity's own id (order entity)", () => {
+        const payload = { event: { name: "order.paid" },
+            payload: { order: { entity: { id: "order_abc" } } } };
+        expect(extractOrderId(payload)).toBe("order_abc");
+    });
+
+    it("returns null when no order id is present", () => {
+        expect(extractOrderId({ event: { name: "payment.captured" } })).toBeNull();
     });
 });
 

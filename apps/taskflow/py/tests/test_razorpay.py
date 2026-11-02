@@ -24,7 +24,7 @@ import hmac
 
 import pytest
 
-from src.razorpay import transition, verify_signature, verify_webhook_signature
+from src.razorpay import transition, verify_signature, verify_webhook_signature, extract_order_id
 from src.constants import EVENT_MAP
 from src.authorize import assert_role
 from src.errors import ForbiddenError
@@ -175,6 +175,44 @@ async def test_default_tier_leaves_ladder_untouched():
     with pytest.raises(ForbiddenError) as exc_info:
         await assert_role(WS, SUB, "owner", _as_member)
     assert exc_info.value.message == "Requires the owner role"
+
+
+# --------------------------------------------------------------------------- #
+# 6. Order-id extraction — the day-16 live-round-trip regression (ADR-015)
+#    Razorpay nests the entity under payload.<type>.entity. The handler must find the
+#    order id there (and tolerate the legacy `data` wrapper + a non-entity wrap), or it
+#    silently no-ops. Pure — no cellar, no network.
+# --------------------------------------------------------------------------- #
+def test_extract_order_id_real_nested_shape():
+    # The real Razorpay webhook shape: payload.payment.entity.order_id.
+    payload = {"event": {"name": "payment.captured"},
+               "payload": {"payment": {"entity": {"order_id": "order_abc", "id": "pay_abc"}}}}
+    assert extract_order_id(payload) == "order_abc"
+
+
+def test_extract_order_id_tolerates_data_wrapper():
+    # A `data` wrapper (not `payload`) must still resolve.
+    payload = {"event": {"name": "payment.captured"},
+               "data": {"payment": {"entity": {"order_id": "order_abc"}}}}
+    assert extract_order_id(payload) == "order_abc"
+
+
+def test_extract_order_id_tolerates_unwrapped_entity():
+    # No `entity` key — the object sits directly under the type.
+    payload = {"event": {"name": "payment.captured"},
+               "payload": {"payment": {"order_id": "order_abc"}}}
+    assert extract_order_id(payload) == "order_abc"
+
+
+def test_extract_order_id_falls_back_to_entity_id():
+    # An order entity carries no order_id; fall back to its own id.
+    payload = {"event": {"name": "order.paid"},
+               "payload": {"order": {"entity": {"id": "order_abc"}}}}
+    assert extract_order_id(payload) == "order_abc"
+
+
+def test_extract_order_id_returns_none_when_absent():
+    assert extract_order_id({"event": {"name": "payment.captured"}}) is None
 
 
 # --------------------------------------------------------------------------- #

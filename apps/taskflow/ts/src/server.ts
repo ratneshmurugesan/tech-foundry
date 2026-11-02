@@ -6,7 +6,7 @@ import { registerErrorHandler } from './errorHandler'
 import { DatabaseCrashError, ForbiddenError, NotFoundError, ServiceUnavailableError, VerificationError } from './errors'
 import { doorHook } from './auth'
 import { assertRole, authorizeHook } from './authorize';
-import { createOrder, verifySignature, verifyWebhookSignature, transition } from './razorpay';
+import { createOrder, verifySignature, verifyWebhookSignature, transition, extractOrderId } from './razorpay';
 import { STARTER_AMOUNT_PAISE, EVENT_MAP } from './constants';
 import { Plan } from './types';
 
@@ -446,17 +446,9 @@ app.post("/webhooks/razorpay", async (request, response) => {
         return { status: "ignored", reason: `unknown event: ${eventName}` }
     }
 
-    // Extract the order id from the payload (Razorpay nests it under data.<entity>).
-    const data = payload.data ?? {}
-    let orderId: string | undefined
-    for (const entityKey of ["payment", "order", "subscription"]) {
-        const entity = data[entityKey]
-        if (entity && typeof entity === "object") {
-            orderId = entity.order_id || entity.id
-            if (orderId) break
-        }
-    }
-
+    // Extract the order id (Razorpay nests it under payload.<type>.entity; the helper
+    // is defensive about the wrapper key and the entity wrap — see extractOrderId).
+    const orderId = extractOrderId(payload)
     if (!orderId) {
         return { status: "ignored", reason: "no order id in payload" }
     }

@@ -6,6 +6,7 @@ The Razorpay seam (ADR-014) — the cashier. Three pure hearts + one network cal
   `order_id|payment_id`). Pure.
 - `verify_webhook_signature(...)`: the server-side webhook signature check (HMAC-SHA256
   over the RAW request body). Pure — the day-16 real-code seam.
+- `extract_order_id(...)`: pull the order id out of a parsed webhook payload. Pure.
 - `create_order(...)`: the ONE outbound network call (Razorpay order creation). Async.
 """
 import hashlib
@@ -36,6 +37,30 @@ def verify_webhook_signature(raw_body: bytes, secret: str, signature: str) -> bo
     Constant-time compare (no timing oracle). Pure — no network, no DB."""
     expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+
+def extract_order_id(payload: dict) -> str | None:
+    """Pull the Razorpay order id out of a parsed webhook payload. Pure.
+
+    Razorpay nests the entity under `payload.<type>.entity` (e.g.
+    `payload.payment.entity.order_id`). We tolerate the `data` wrapper and a
+    non-`entity`-wrapped object too, so a shape drift can never silently no-op the
+    handler (the day-16 live round-trip caught exactly that). Returns None if no
+    order id is present — the handler then answers a 200 no-op, not a crash."""
+    for wrapper_key in ("payload", "data"):
+        wrapper = payload.get(wrapper_key)
+        if not isinstance(wrapper, dict):
+            continue
+        for entity_key in ("payment", "order", "subscription"):
+            node = wrapper.get(entity_key)
+            if not isinstance(node, dict):
+                continue
+            # The real payload wraps the entity object under an `entity` key.
+            entity = node.get("entity") if isinstance(node.get("entity"), dict) else node
+            order_id = entity.get("order_id") or entity.get("id")
+            if order_id:
+                return order_id
+    return None
 
 
 async def _fetch(url: str, auth, json) -> httpx.Response:
