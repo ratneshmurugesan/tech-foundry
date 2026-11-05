@@ -74,3 +74,6 @@ apps/taskflow/deploy/*.gz
 apps/taskflow/deploy/*.gz.*
 apps/taskflow/deploy/*.dump
 apps/taskflow/deploy/*.sql
+
+# Throwaway local test harnesses (e.g. the 16a Razorpay live round-trip page) — never committed
+apps/taskflow/scratch/
