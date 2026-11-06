@@ -48,6 +48,31 @@ class PostgresRepository {
         }
     }
 
+    async saveWorkspaceWithOwner(name: string, sub: string): Promise<Workspace> {
+        const db = getDb()
+        const id = generateId()
+
+        // Creator is minted as owner in ONE transaction — closes the orphan-creator window of
+        // saveWorkspace + a separate member insert as two commits (mirrors py save_workspace_with_owner).
+        const rows = await db.transaction(async (tx) => {
+            const ws = await tx
+                .insert(workspaces)
+                .values({ id, name })
+                .returning()
+            await tx
+                .insert(workspaceMembers)
+                .values({ id: generateId(), workspace_id: id, user_id: sub, role: "owner" })
+            return ws
+        })
+
+        return {
+            id: rows[0].id,
+            name: rows[0].name,
+            plan_tier: rows[0].plan_tier as string,
+            created_at: rows[0].created_at as Date
+        }
+    }
+
     async updateWorkspace(id: string, changes: Partial<Workspace>): Promise<Workspace | undefined> {
         const db = getDb()
 

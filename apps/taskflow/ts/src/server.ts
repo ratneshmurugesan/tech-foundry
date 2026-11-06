@@ -159,9 +159,13 @@ app.post("/workspaces", {
 },
     async (request, response) => {
         const { name } = request.body
+        const sub = request.user?.sub
         try {
-            const newWorkspace = await repo.saveWorkspace(name)
-            return response.code(201).send(newWorkspace)
+            // Creator is minted as owner in ONE transaction (sub-atomic) — no orphan-creator window.
+            if (sub !== undefined) {
+                return response.code(201).send(await repo.saveWorkspaceWithOwner(name, sub))
+            }
+            return response.code(201).send(await repo.saveWorkspace(name))
         } catch (dbError) {
             throw new DatabaseCrashError(dbError)
         }

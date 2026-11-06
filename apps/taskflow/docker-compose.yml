@@ -103,6 +103,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  taskflow-web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_AUTH0_DOMAIN: dev-qr8x8ecg3nfb603i.uk.auth0.com
+        NEXT_PUBLIC_AUTH0_CLIENT_ID: ${NEXT_PUBLIC_AUTH0_CLIENT_ID:-}
+        NEXT_PUBLIC_AUTH0_AUDIENCE: https://dev-qr8x8ecg3nfb603i.uk.auth0.com/api/v2/
+    ports:
+      - "3000:3000"
+    environment:
+      # Compose service-name proxy target (overrides .env.local's localhost:8000).
+      BACKEND_URL: http://taskflow-ts:8000
+    env_file:
+      - path: web/.env.local
+        required: false
+    volumes:
+      - ./web:/app
+      - ./web/node_modules:/app/node_modules:cached
+    command: npm run dev
+    depends_on:
+      taskflow-ts:
+        condition: service_healthy
   db-push:
     build: ./ts
     environment:

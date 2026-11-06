@@ -51,3 +51,9 @@ services:
     # dev and prod share one file.
     command: uv run uvicorn src.main:app --host 0.0.0.0 --port 8001
     restart: unless-stopped
+
+  taskflow-web:
+    volumes: !reset []   # DROP base's ./web + :cached node_modules mounts: the baked image IS the tree.
+    # dev's `npm run dev` = Next.js dev server (watch). prod runs `next start` ONCE.
+    command: npm start
+    restart: unless-stopped
