@@ -566,14 +566,18 @@ app.patch("/projects/:id", {
     const { id } = request.params
     const changes = request.body
 
-    const sub = request.user?.sub
-    if(!sub){
-        throw new ForbiddenError("Not a member of this workspace")
-    }
-    const existingWsm = await repo.findMembership(id, sub)
-    if(existingWsm?.role !== "owner") {
-        throw new ForbiddenError("Requires the owner role")
-    }
+    // Route-level membership check disabled (WIP) — parity with the PY kitchen, which keeps
+    // these commented out. `id` here is the PROJECT id, not the workspace id, so
+    // findMembership(id, sub) could never match; the authorizeHook middleware (which walks
+    // the FK chain to the real workspace) is the enforcement point in both kitchens.
+    // const sub = request.user?.sub
+    // if(!sub){
+    //     throw new ForbiddenError("Not a member of this workspace")
+    // }
+    // const existingWsm = await repo.findMembership(id, sub)
+    // if(existingWsm?.role !== "owner") {
+    //     throw new ForbiddenError("Requires the owner role")
+    // }
 
     // Only validate the destination workspace if the request is actually moving the project
     if (changes.workspace_id) {
@@ -617,14 +621,17 @@ app.delete("/projects/:id", {
 }, async (request, response) => {
     const { id } = request.params
 
-    const sub = request.user?.sub
-    if(!sub){
-        throw new ForbiddenError("Not a member of this workspace")
-    }
-    const existingWsm = await repo.findMembership(id, sub)
-    if(existingWsm?.role !== "owner") {
-        throw new ForbiddenError("Requires the owner role")
-    }
+    // Route-level membership check disabled (WIP) — parity with the PY kitchen. `id` is the
+    // PROJECT id, so findMembership(id, sub) could never match; the authorizeHook middleware
+    // is the enforcement point in both kitchens.
+    // const sub = request.user?.sub
+    // if(!sub){
+    //     throw new ForbiddenError("Not a member of this workspace")
+    // }
+    // const existingWsm = await repo.findMembership(id, sub)
+    // if(existingWsm?.role !== "owner") {
+    //     throw new ForbiddenError("Requires the owner role")
+    // }
 
     let existingProject;
     try {
@@ -743,14 +750,17 @@ app.patch("/issues/:id", {
     const { id } = request.params
     const changes = request.body
 
-    const sub = request.user?.sub
-    if(!sub){
-        throw new ForbiddenError("Not a member of this workspace")
-    }
-    const existingWsm = await repo.findMembership(id, sub)
-    if(existingWsm?.role !== "owner") {
-        throw new ForbiddenError("Requires the owner role")
-    }
+    // Route-level membership check disabled (WIP) — parity with the PY kitchen. `id` is the
+    // ISSUE id, so findMembership(id, sub) could never match; the authorizeHook middleware
+    // is the enforcement point in both kitchens.
+    // const sub = request.user?.sub
+    // if(!sub){
+    //     throw new ForbiddenError("Not a member of this workspace")
+    // }
+    // const existingWsm = await repo.findMembership(id, sub)
+    // if(existingWsm?.role !== "owner") {
+    //     throw new ForbiddenError("Requires the owner role")
+    // }
 
     let existingIssue;
     try {
@@ -778,14 +788,17 @@ app.delete("/issues/:id", {
 }, async (request, response) => {
     const { id } = request.params
 
-    const sub = request.user?.sub
-    if(!sub){
-        throw new ForbiddenError("Not a member of this workspace")
-    }
-    const existingWsm = await repo.findMembership(id, sub)
-    if(existingWsm?.role !== "owner") {
-        throw new ForbiddenError("Requires the owner role")
-    }
+    // Route-level membership check disabled (WIP) — parity with the PY kitchen. `id` is the
+    // ISSUE id, so findMembership(id, sub) could never match; the authorizeHook middleware
+    // is the enforcement point in both kitchens.
+    // const sub = request.user?.sub
+    // if(!sub){
+    //     throw new ForbiddenError("Not a member of this workspace")
+    // }
+    // const existingWsm = await repo.findMembership(id, sub)
+    // if(existingWsm?.role !== "owner") {
+    //     throw new ForbiddenError("Requires the owner role")
+    // }
 
     let existingIssue;
     try {

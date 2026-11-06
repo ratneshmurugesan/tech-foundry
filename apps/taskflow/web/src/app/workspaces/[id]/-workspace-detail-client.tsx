@@ -29,7 +29,8 @@ export function WorkspaceDetailClient() {
     queryKey: ["projects", id],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
-      return api<Project[]>(`/workspaces/${id}/projects`, { token });
+      // The kitchen exposes a flat, membership-scoped /projects — filter to this workspace client-side.
+      return (await api<Project[]>("/projects", { token })).filter((p) => p.workspace_id === id);
     },
     enabled: isAuthenticated && !!id,
   });
@@ -37,9 +38,9 @@ export function WorkspaceDetailClient() {
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
       const token = await getAccessTokenSilently();
-      return api<Project>(`/workspaces/${id}/projects`, {
+      return api<Project>("/projects", {
         method: "POST",
-        body: { name },
+        body: { name, workspace_id: id },
         token,
       });
     },

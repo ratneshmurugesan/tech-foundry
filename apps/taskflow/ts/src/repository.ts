@@ -522,8 +522,8 @@ class PostgresRepository {
             .from(workspaceMembers)
             .where(
                 and(
-                    eq(workspaces.id, (workspaceId)),
-                    eq(workspaceMembers.user_id, (sub)))
+                    eq(workspaceMembers.workspace_id, workspaceId),
+                    eq(workspaceMembers.user_id, sub))
             )
         return membershipRows.length
             ? membershipRows[0] as WorkspaceMember

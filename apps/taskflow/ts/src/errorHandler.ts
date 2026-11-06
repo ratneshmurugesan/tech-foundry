@@ -1,6 +1,6 @@
 import { FastifyError, FastifyInstance } from 'fastify'
 import { ZodError } from 'zod'
-import { ConflictError, NotFoundError, DatabaseCrashError, UnauthorizedError, VerificationError, ServiceUnavailableError } from './errors'
+import { ConflictError, NotFoundError, DatabaseCrashError, UnauthorizedError, ForbiddenError, VerificationError, ServiceUnavailableError } from './errors'
 
 export function registerErrorHandler(fastify: FastifyInstance) {
     fastify.setErrorHandler((unknownError: unknown, request, response) => {
@@ -68,6 +68,19 @@ export function registerErrorHandler(fastify: FastifyInstance) {
             return response.status(401).send({
                 statusCode: 401,
                 error: 'Unauthorized',
+                message: error.message,
+            })
+        }
+
+        // 4.5 Semantic 403 Forbidden (parity with the PY kitchen's forbidden_exception_handler)
+        if (error instanceof ForbiddenError) {
+            request.log.error({
+                err: error.message ?? error
+            })
+
+            return response.status(403).send({
+                statusCode: 403,
+                error: 'Forbidden',
                 message: error.message,
             })
         }

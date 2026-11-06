@@ -23,7 +23,8 @@ export function BoardClient() {
     queryKey: ["issues", projectId],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
-      return api<Issue[]>(`/projects/${projectId}/issues`, { token });
+      // The kitchen exposes a flat, membership-scoped /issues — filter to this project client-side.
+      return (await api<Issue[]>("/issues", { token })).filter((i) => i.project_id === projectId);
     },
     enabled: isAuthenticated && !!projectId,
   });
@@ -32,7 +33,7 @@ export function BoardClient() {
   const toggleMutation = useMutation({
     mutationFn: async ({ issue, newStatus }: { issue: Issue; newStatus: "open" | "closed" }) => {
       const token = await getAccessTokenSilently();
-      return api<Issue>(`/projects/${projectId}/issues/${issue.id}`, {
+      return api<Issue>(`/issues/${issue.id}`, {
         method: "PATCH",
         body: { status: newStatus },
         token,
@@ -62,9 +63,9 @@ export function BoardClient() {
   const createMutation = useMutation({
     mutationFn: async (title: string) => {
       const token = await getAccessTokenSilently();
-      return api<Issue>(`/projects/${projectId}/issues`, {
+      return api<Issue>("/issues", {
         method: "POST",
-        body: { title },
+        body: { title, project_id: projectId },
         token,
       });
     },
