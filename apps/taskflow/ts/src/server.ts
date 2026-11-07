@@ -36,6 +36,15 @@ declare module 'fastify' {
 }
 fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body: Buffer, done) => {
     req.rawBody = body
+    // Empty body (e.g. a POST with Content-Type: application/json but no payload,
+    // like /billing/checkout from the web client): JSON.parse('') throws and would
+    // 500 every body-less POST. Fastify's default parser treats empty as undefined —
+    // restore that. The PY kitchen is unaffected (FastAPI only parses when the route
+    // declares a body param), so this keeps the two kitchens in parity.
+    if (body.length === 0) {
+        done(null, undefined)
+        return
+    }
     try {
         done(null, JSON.parse(body.toString('utf8')))
     } catch (e) {

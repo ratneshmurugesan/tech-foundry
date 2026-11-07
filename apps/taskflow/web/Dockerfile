@@ -1,4 +1,8 @@
 # TaskFlow web — Dockerfile (multi-stage)
+# NOTE: .next must stay in .dockerignore. The dev chart bind-mounts ./web over
+# /app, so any .next baked into the image would be shadowed by the HOST's
+# darwin-built Turbopack cache (absolute paths, darwin native-binary requires)
+# and every CSS transform 500s inside the linux container.
 FROM node:22-alpine AS base
 RUN corepack enable
 

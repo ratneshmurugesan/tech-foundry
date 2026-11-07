@@ -119,8 +119,22 @@ services:
       - path: web/.env.local
         required: false
     volumes:
+      # Source is hot-mounted for dev, but node_modules is NOT mounted (unlike the
+      # ts kitchen): the image is node:22-alpine (linux-musl) and the host's
+      # node_modules holds darwin-arm64 native binaries (lightningcss/oxide for
+      # Tailwind 4 + Turbopack). Mounting them over the image's linux binaries
+      # breaks every CSS transform with "Cannot find module
+      # '../lightningcss.linux-arm64-musl.node'" -> 500 on all pages.
+      # The ts kitchen survives the same mount only because none of its
+      # runtime deps ship native binaries. Cost: adding a web npm dep now
+      # requires a `docker compose build web` (the image's `npm ci` is the
+      # source of truth for deps).
+      # .next is likewise shadowed with a private volume: the host's .next is
+      # a darwin Turbopack cache (absolute paths + darwin native-binary
+      # requires) and must not leak into the linux container.
       - ./web:/app
-      - ./web/node_modules:/app/node_modules:cached
+      - /app/node_modules
+      - /app/.next
     command: npm run dev
     depends_on:
       taskflow-ts:
