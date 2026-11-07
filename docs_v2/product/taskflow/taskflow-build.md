@@ -141,7 +141,7 @@ flowchart LR
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-11-04)
+## 5. What's built vs. what's next (honest state, 2026-11-07)
 
 | Capability | State |
 |---|---|
@@ -156,7 +156,13 @@ flowchart LR
 | **Razorpay checkout** (create order, verify payment) | ✅ shipped day-15 (ADR-014) |
 | **Webhook route** (sealed-delivery auth, event map, always-200) | ✅ shipped day-16 (ADR-015) |
 | Webhook / subscription lifecycle (**live** round-trip) | ✅ **proven 2026-11-04** — real `rzp_test_` order → mock-bank OTP → `payment.captured` webhook → plan `trial → active` on the running box (debt 16a closed) |
-| UI in a browser (Sprint 3) | ⏳ ahead |
+| **Web UI — workspaces dashboard** (list, create, Auth0 login) | ✅ shipped day-17 (Next.js 15 + Tailwind 4 + Auth0 React SDK; the dining room) |
+| **Web UI — workspace detail + projects** (scoped list, create) | ✅ shipped day-17 |
+| **Web UI — board view** (two-column open/closed, issue toggle) | ✅ shipped day-17 (toggle works; drag not yet wired) |
+| **Web UI — settings/billing** (plan display, checkout button) | ✅ shipped day-17 |
+| **Web UI — issue create/edit** (Cmd+N, basic form) | ⏳ ahead (roadmap day 21-22) |
+| **Web UI — board drag** (dnd-kit or HTML5 drag) | ⏳ ahead (roadmap day 19-20 remainder) |
+| **Full-stack deploy** (single URL, reverse proxy, $0 VM) | ⏳ ahead (roadmap day 25-26) |
 | Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) | ⏳ ahead |
 
 ---

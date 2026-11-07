@@ -31,7 +31,7 @@ OUT="${2:-$HERE/llms.txt}"
 > Docs carry WHY / DECIDED / NEXT-OWED-TO / DEBT; the code is the WHAT.
 >
 > **Read order:** `README.md` (below) → `../docs/prompts/master.md` (the 18 rules)
-> → the latest note + its ADR + the roadmap's Next row → then *code*.
+> → the latest note + its ADR + the build ledger's Next row → then *code*.
 SUMMARY
   echo
 
@@ -39,7 +39,7 @@ SUMMARY
   #    runs — and it can never be hand-written (the hand-written predecessor, v1 roadmap
   #    §16 "last updated 2026-09-25", rotted in a week; a derived one can't).
   #    Inputs: the newest notes/ filename + debt.md's Status column + git + the
-  #    roadmap's §16 Next row. All of these already exist for the EOD ritual;
+  #    build ledger's §5 next row. All of these already exist for the EOD ritual;
   #    NOW costs no new ritual, only their parsing.
   echo "## NOW"
   echo "*(derived on every run — never hand-edited)*"
@@ -72,16 +72,16 @@ SUMMARY
   else
     echo "- open debts: none"
   fi
-  # The "next" always derives from the roadmap's §16 Next row (EOD step 4 keeps it
-  # alive every day). v2 drafts no day+1 prompt file, so there is no
-  # "prompt file" branch — the old fallback path is now the only path. Copy the row's
-  # *own words* — a pointer, never a re-derivation (ADR-013 rule 2); if the section
-  # moved and nothing parses, degrade to a bare pointer.
-  nextrow=$(awk '/^## 16\./ { f = 1; next } f && /^## [0-9]/ { exit } f && /^[0-9]+\. / { sub(/^[0-9]+\. */, ""); gsub(/\*/, ""); gsub(/`/, ""); print; exit }' "$DOCS/../docs/roadmaps/v4/master.md" 2>/dev/null | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+  # The "next" derives from the build ledger's §5 "What's built vs. what's next" table —
+  # the *living* roadmap. (ADR-013 froze docs/ as v1 history, so the old §16 pointer
+  # rotted the day its rows closed; the ledger is the doc that actually moves.) Copy the
+  # first `⏳ ahead` row's *own capability words* — a pointer, never a re-derivation
+  # (ADR-013 rule 2); if nothing parses, degrade to a bare pointer.
+  nextrow=$(awk -F'|' '/^## 5\./ { f = 1; next } f && /^## [0-9]/ { exit } f && /^\|/ && $3 ~ /ahead/ { c=$2; gsub(/[*]/, "", c); gsub(/`/, "", c); gsub(/^ +/, "", c); gsub(/ +$/, "", c); print c; exit }' "$DOCS/product/taskflow/taskflow-build.md" 2>/dev/null | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
   if [ -n "$nextrow" ]; then
-    echo "- next: $nextrow … → roadmap §16 (../docs/roadmaps/v4/master.md)"
+    echo "- next: $nextrow … → build ledger §5 (product/taskflow/taskflow-build.md)"
   else
-    echo "- next: → roadmap 'Current Status & Next' (../docs/roadmaps/v4/master.md) — its first numbered row is the day"
+    echo "- next: → build ledger 'What's built vs. what's next' (product/taskflow/taskflow-build.md) — its first ⏳ row is the day"
   fi
   echo
 
@@ -93,7 +93,7 @@ SUMMARY
 - [product/taskflow/taskflow-product](product/taskflow/taskflow-product.md): the TaskFlow **spec** — what it is, who it's for, why it feels good (stable; no "next")
 - [product/taskflow/taskflow-build](product/taskflow/taskflow-build.md): the TaskFlow **build ledger** — how we build + prove it's right (*this* drives the roadmap)
 - [product/taskflow/design-pattern-ledger](product/taskflow/design-pattern-ledger.md): the TaskFlow **design-pattern ledger** — what pattern is in use, why, and the swap story each one buys (stable; grows as the roadmap lands patterns)
-- [roadmap](../docs/roadmaps/v4/master.md): the single living roadmap — one line per day; *grep for NEXT*
+- [roadmap](../docs/roadmaps/v4/master.md): the v1-era roadmap (frozen) — one line per day; the *living* "next" now lives in the build ledger
 - [AGENTS.md](../AGENTS.md): the session-start pointer (rules 1/4) — a new agent session reads this first
 DOCMAP
   echo

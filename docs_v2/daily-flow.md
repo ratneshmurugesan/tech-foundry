@@ -37,7 +37,7 @@
 │  1. Note   — 3–5 lines: built / didn't / decisions / debt       │
 │  2. ADR    — only if a real decision was made (12 lines)        │
 │  3. Debt   — one row in debt.md (add / flip / prune on close)   │
-│  4. Roadmap— one line in v4/master.md §16                       │
+│  4. Roadmap— one line in build ledger §5 (taskflow-build.md)    │
 │  5. Ledger — only if a new pattern landed (horizon→in-use)      │
 │  6. Manifest— `sh docs_v2/gen_llms.sh`                          │
 │                                                                 │
@@ -60,7 +60,7 @@ You don't do "closeout then kickoff" as two separate acts. The v2 closeout
 | What you write at closeout | What tomorrow's kickoff reads |
 |---|---|
 | Note's *Next owed to* line | "Here's what's next" |
-| Roadmap §16 row (updated) | "Here's the plan" |
+| Roadmap row (build ledger §5, ⏳→✅) | "Here's the plan" |
 | `sh gen_llms.sh` | "Here's the manifest (NOW section)" |
 
 So tomorrow morning you just **read** — 3 minutes, no writing. The writing
