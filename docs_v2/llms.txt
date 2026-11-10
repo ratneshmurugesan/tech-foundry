@@ -10,10 +10,10 @@
 
 ## NOW
 *(derived on every run — never hand-edited)*
-- last: day-17 (2026-11-06 — web-ui) → notes/day-17-web-ui-2026-11-06-2254.md
+- last: day-18 (2026-11-10 — web-board-drag) → notes/day-18-web-board-drag-2026-11-10-1303.md
 - git: dev
 - open debts: 17a → debt.md (triggers, not dates)
-- next: Web UI — issue create/edit (Cmd+N, basic form) … → build ledger §5 (product/taskflow/taskflow-build.md)
+- next: Full-stack deploy (single URL, reverse proxy, $0 VM) … → build ledger §5 (product/taskflow/taskflow-build.md)
 
 ## Docs map (everything in this tree)
 - [README](README.md): what lives where + the EOD procedure
@@ -31,6 +31,7 @@
 - [ADR-013 docs-v2-home](adrs/adr-013-docs-v2-home.md): *status: Active*
 
 ## Day notes (newest first)
+- [day-18-web-board-drag](notes/day-18-web-board-drag-2026-11-10-1303.md): *2026-11-10*
 - [day-17-web-ui](notes/day-17-web-ui-2026-11-06-2254.md): *2026-11-06*
 - [day-16-razorpay-webhooks](notes/day-16-razorpay-webhooks-2026-10-22-1435.md): *2026-10-22*
 - [day-15-razorpay-checkout](notes/day-15-razorpay-checkout-2026-10-18-1921.md): *2026-10-18*

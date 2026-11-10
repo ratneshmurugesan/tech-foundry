@@ -141,7 +141,7 @@ flowchart LR
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-11-07)
+## 5. What's built vs. what's next (honest state, 2026-11-10)
 
 | Capability | State |
 |---|---|
@@ -160,8 +160,8 @@ flowchart LR
 | **Web UI — workspace detail + projects** (scoped list, create) | ✅ shipped day-17 |
 | **Web UI — board view** (two-column open/closed, issue toggle) | ✅ shipped day-17 (toggle works; drag not yet wired) |
 | **Web UI — settings/billing** (plan display, checkout button) | ✅ shipped day-17 |
-| **Web UI — issue create/edit** (Cmd+N, basic form) | ⏳ ahead (roadmap day 21-22) |
-| **Web UI — board drag** (dnd-kit or HTML5 drag) | ⏳ ahead (roadmap day 19-20 remainder) |
+| **Web UI — issue create/edit** (Cmd+N, basic form) | ✅ shipped day-18 |
+| **Web UI — board drag** (dnd-kit drag, optimistic PATCH) | ✅ shipped day-18 |
 | **Full-stack deploy** (single URL, reverse proxy, $0 VM) | ⏳ ahead (roadmap day 25-26) |
 | Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) | ⏳ ahead |
 
