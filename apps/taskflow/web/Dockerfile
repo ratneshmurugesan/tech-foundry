@@ -15,13 +15,17 @@ FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# NEXT_PUBLIC_* are inlined at build time; BACKEND_URL is runtime (used by rewrites).
+# NEXT_PUBLIC_* are inlined at build time. BACKEND_URL is ALSO build-time:
+# next.config.ts rewrites are evaluated during `next build` and frozen into .next/
+# — a runtime env var has no effect on `next start`. So it must be an ARG.
 ARG NEXT_PUBLIC_AUTH0_DOMAIN
 ARG NEXT_PUBLIC_AUTH0_CLIENT_ID
 ARG NEXT_PUBLIC_AUTH0_AUDIENCE
+ARG BACKEND_URL=http://localhost:8000
 ENV NEXT_PUBLIC_AUTH0_DOMAIN=$NEXT_PUBLIC_AUTH0_DOMAIN
 ENV NEXT_PUBLIC_AUTH0_CLIENT_ID=$NEXT_PUBLIC_AUTH0_CLIENT_ID
 ENV NEXT_PUBLIC_AUTH0_AUDIENCE=$NEXT_PUBLIC_AUTH0_AUDIENCE
+ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build
 
 FROM base AS run

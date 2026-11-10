@@ -12,6 +12,7 @@
 
 services:
   postgres:
+    restart: unless-stopped   # 2026-11-10: the cellar must survive a `docker stop` + re-`up` (it didn't on Nov 8).
     ports: !reset []   # 2026-09-11 (ADR-008 consequence): the cellar has NO host door in prod.
     # ADR-009 fix — use the compose-spec `!reset` tag, not `[]` / `~`:
     #   • `ports: []` and `ports: ~` are BOTH NO-OPS. Compose MERGES overlay lists

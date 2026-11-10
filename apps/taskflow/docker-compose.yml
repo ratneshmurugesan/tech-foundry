@@ -110,6 +110,7 @@ services:
         NEXT_PUBLIC_AUTH0_DOMAIN: dev-qr8x8ecg3nfb603i.uk.auth0.com
         NEXT_PUBLIC_AUTH0_CLIENT_ID: ${NEXT_PUBLIC_AUTH0_CLIENT_ID:-}
         NEXT_PUBLIC_AUTH0_AUDIENCE: https://dev-qr8x8ecg3nfb603i.uk.auth0.com/api/v2/
+        BACKEND_URL: http://taskflow-ts:8000
     ports:
       - "3000:3000"
     environment:
