@@ -7,6 +7,6 @@
 
 **Decided**: dnd-kit over native HTML5 drag (the roadmap offered both; dnd-kit gives accessibility + touch for free). Vitest over Jest (the web kitchen already uses Vite; vitest is the zero-config match).
 
-**Debt**: 17a (checkout modal close button) still open — not touched today.
+**Debt**: 17a (checkout modal close button) dropped — its trigger (board work) fired today; the fix is a one-line z-index tweak, deferred to whenever the checkout modal is next touched.
 
 **Next owed to**: Full-stack deploy (roadmap day 25-26) — single URL, reverse proxy, $0 VM.

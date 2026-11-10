@@ -12,7 +12,7 @@
 *(derived on every run — never hand-edited)*
 - last: day-18 (2026-11-10 — web-board-drag) → notes/day-18-web-board-drag-2026-11-10-1303.md
 - git: dev
-- open debts: 17a → debt.md (triggers, not dates)
+- open debts: none
 - next: Full-stack deploy (single URL, reverse proxy, $0 VM) … → build ledger §5 (product/taskflow/taskflow-build.md)
 
 ## Docs map (everything in this tree)
