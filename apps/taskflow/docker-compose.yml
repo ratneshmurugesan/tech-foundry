@@ -137,6 +137,18 @@ services:
       - /app/node_modules
       - /app/.next
     command: npm run dev
+    healthcheck:
+      # Probe /workspaces, NOT /: the root page is a client-side redirect
+      # (page.tsx -> redirect("/workspaces")), which Next serializes in a
+      # prerender as HTTP 404 + NEXT_REDIRECT — wget --spider would read the
+      # 404 as failure and the container would never go healthy.
+      # /workspaces is prerendered (x-nextjs-prerender: 1) and answers 200.
+      # busybox wget ships in node:22-alpine, same idiom as the ts kitchen.
+      test: ["CMD-SHELL", "wget -q --spider -T 5 http://127.0.0.1:3000/workspaces || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s # `next start` boots slower than tsx; give it room
     depends_on:
       taskflow-ts:
         condition: service_healthy
