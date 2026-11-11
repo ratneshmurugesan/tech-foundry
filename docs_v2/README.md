@@ -48,7 +48,8 @@ docs_v2/
    process changes get a line in the note, never an ADR.
 3. **Debt** — one `debt.md` row update: anything deferred *becomes* a row;
    anything claimed/closed flips status to `done (link note)` or `dropped (link ADR)`.
-4. **Roadmap** — one line in `../docs/roadmaps/v4/master.md` + its NEXT.
+4. **Build ledger** — one row in `product/taskflow/taskflow-build.md` §5 (the *living*
+   roadmap; `../docs/roadmaps/v4/master.md` is frozen v1 history since ADR-013 — never the target).
 5. **Ledger** — only if a new pattern landed: move it horizon→in-use in
    `product/taskflow/design-pattern-ledger.md` (a 30-second move; a no-op most days).
 6. **Manifest** — `sh gen_llms.sh`, then `git add -A` and **show the diff + propose the
