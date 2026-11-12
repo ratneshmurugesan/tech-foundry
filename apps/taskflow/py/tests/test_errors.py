@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 import src.server
 
-from src.errors import NotFoundError
+from src.errors import NotFoundError, ConflictError
 
 app = src.server.app
 
@@ -55,3 +55,11 @@ async def test_not_found_handler_envelope():
         "statusCode": 404,
         "message": error_message
     }
+
+
+def test_conflict_default_message_is_the_golden_string():
+    """Golden-matrix parity (ADR-001): the default ConflictError message is a shared
+    contract string. The TS twin (ts/tests/errors.test.ts) asserts the identical literal.
+    The PY kitchen once shipped the typo "exisits"; this pins the corrected spelling so a
+    future drift in either kitchen reds on push."""
+    assert ConflictError().message == "Resource already exists"

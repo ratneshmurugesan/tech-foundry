@@ -42,6 +42,14 @@ async def get_root():
     except Exception as db_error:
             raise DatabaseCrashError(db_error)
 
+@app.get("/health", status_code=200)
+async def get_health():
+    # Lighthouse (ADR-006/011): the dedicated liveness probe. It is a public path (in
+    # PUBLIC_PATHS), so the door + key-ring both skip it and it answers 200 with no badge.
+    # The body is kitchen-identical ({"status": "ok"}) so the golden matrix asserts one
+    # shared shape on both counters (the parity wall, ADR-001).
+    return {"status": "ok"}
+
 @app.get("/workspaces", status_code=200)
 async def get_workspaces(request: Request) -> List[Workspace]:
     sub = _sub(request)

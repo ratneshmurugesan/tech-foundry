@@ -143,6 +143,20 @@ app.get("/", {
     }
 })
 
+// Lighthouse (ADR-006/011): the dedicated liveness probe. It is a public path (in
+// PUBLIC_PATHS), so the door + key-ring both skip it and it answers 200 with no badge.
+// The body is kitchen-identical ({"status": "ok"}) so the golden matrix asserts one
+// shared shape on both counters (the parity wall, ADR-001).
+app.get("/health", {
+    schema: {
+        response: {
+            200: z.object({ status: z.string() }),
+        }
+    }
+}, async (request, response) => {
+    return response.code(200).send({ status: 'ok' })
+})
+
 app.get("/workspaces", {
     schema: {
         response: {

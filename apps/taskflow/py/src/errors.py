@@ -4,7 +4,7 @@ class NotFoundError(Exception):
         super().__init__(self.message)
 
 class ConflictError(Exception):
-    def __init__(self, message: str = "Resource already exisits"):
+    def __init__(self, message: str = "Resource already exists"):
         self.message = message
         super().__init__(self.message)
 

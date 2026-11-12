@@ -17,6 +17,14 @@ describe("Custom Error Classes Contracts", () => {
     expect(error.name).toBe("ConflictError");
   });
 
+  test("ConflictError default message is the golden string (parity with PY)", () => {
+    // Golden-matrix parity (ADR-001): the default message is a shared contract string.
+    // The PY twin (py/tests/test_errors.py) asserts the identical literal, so a drift in
+    // either kitchen reds on push.
+    const error = new ConflictError();
+    expect(error.message).toBe("Resource already exists");
+  });
+
   test("DatabaseCrashError handles sensitive data securely", () => {
     const originalError = new Error("Connection timed out");
     const secretError = new Error("DB_PASSWORD=secret123");
