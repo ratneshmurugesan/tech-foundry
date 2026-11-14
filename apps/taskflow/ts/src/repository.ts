@@ -530,13 +530,13 @@ class PostgresRepository {
             : undefined
     }
 
-    async inviteMember(workspaceId: string, sub: string) {
+    async inviteMember(workspaceId: string, userId: string, role?: "owner" | "member") {
         const db = getDb()
         const id = generateId()
 
         const rows = await db
             .insert(workspaceMembers)
-            .values({ id, workspace_id: workspaceId, role: "member", user_id: sub })
+            .values({ id, workspace_id: workspaceId, role: role ?? "member", user_id: userId })
             .returning();
 
         return rows[0]

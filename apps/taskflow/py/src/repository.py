@@ -1,7 +1,7 @@
 from typing import List, Optional
 from .db import get_session
 from .models import WorkspaceModel, ProjectModel, IssueModel, WorkspaceMemberModel, PaymentPlansModel
-from .types import Workspace, Project, Issue, WorkspaceMember, CreateWorkspaceMember, Plan
+from .types import Workspace, Project, Issue, WorkspaceMember, Plan
 from .razorpay import transition
 from .ids import generate_id
 from sqlalchemy import select, update, and_
@@ -151,14 +151,14 @@ class PostgresRepository:
         finally:
             await session.close()
 
-    async def invite_member(self, changes: CreateWorkspaceMember) -> WorkspaceMember:
+    async def invite_member(self, workspace_id: str, user_id: str, role: str | None) -> WorkspaceMember:
         session = await get_session()
         try:
             model = WorkspaceMemberModel(
-                id=generate_id(), 
-                workspace_id=changes.workspace_id, 
-                user_id=changes.user_id,
-                role=changes.role or "member"
+                id=generate_id(),
+                workspace_id=workspace_id,
+                user_id=user_id,
+                role=role or "member"
             )
             session.add(model)
             await session.commit()

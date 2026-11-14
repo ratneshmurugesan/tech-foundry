@@ -10,9 +10,9 @@
 
 ## NOW
 *(derived on every run — never hand-edited)*
-- last: day-20 (2026-11-12 — parity-hardening) → notes/day-20-parity-hardening-2026-11-12-1836.md
+- last: day-21 (2026-11-14 — parity-closeout) → notes/day-21-parity-closeout-2026-11-14-1316.md
 - git: dev
-- open debts: 20a · 20b · 20c → debt.md (triggers, not dates)
+- open debts: none
 - next: Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) … → build ledger §5 (product/taskflow/taskflow-build.md)
 
 ## Docs map (everything in this tree)
@@ -32,6 +32,7 @@
 - [ADR-013 docs-v2-home](adrs/adr-013-docs-v2-home.md): *status: Active*
 
 ## Day notes (newest first)
+- [day-21-parity-closeout](notes/day-21-parity-closeout-2026-11-14-1316.md): *2026-11-14*
 - [day-20-parity-hardening](notes/day-20-parity-hardening-2026-11-12-1836.md): *2026-11-12*
 - [day-19-full-stack-deploy](notes/day-19-full-stack-deploy-2026-11-11-1528.md): *2026-11-11*
 - [day-18-web-board-drag](notes/day-18-web-board-drag-2026-11-10-1303.md): *2026-11-10*

@@ -21,12 +21,20 @@ export function registerErrorHandler(fastify: FastifyInstance) {
             })
         }
 
-        // 2. Fastify native validation fallback (in case any non-zod schemas are triggered)
+        // 2. Fastify native validation (AJV) — the actual type-provider path.
+        //    fastify-type-provider-zod compiles Zod schemas to JSON schema, so AJV (not Zod)
+        //    does the validation and the error lands HERE, not in the ZodError branch above
+        //    (dead for that path). Emit the same generic message + details shape as the PY
+        //    kitchen's RequestValidationError handler (ADR-001 parity wall).
         if (error.validation) {
             return response.status(400).send({
                 statusCode: 400,
                 error: 'Bad Request',
-                message: error.message,
+                message: 'Validation failed',
+                details: error.validation.map((v) => ({
+                    field: v.instancePath.replace(/^\//, '').replace(/\//g, '.'),
+                    message: v.message
+                }))
             })
         }
 

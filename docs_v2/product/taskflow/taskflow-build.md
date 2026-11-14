@@ -141,7 +141,7 @@ flowchart LR
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-11-11)
+## 5. What's built vs. what's next (honest state, 2026-11-14)
 
 | Capability | State |
 |---|---|
@@ -163,7 +163,8 @@ flowchart LR
 | **Web UI — issue create/edit** (Cmd+N, basic form) | ✅ shipped day-18 |
 | **Web UI — board drag** (dnd-kit drag, optimistic PATCH) | ✅ shipped day-18 |
 | **Full-stack deploy** (single URL, reverse proxy, $0 VM) | ✅ **shipped day-19** (ADR-016 — one-command `deploy/deploy.sh`: Mac → box → street; the web healthcheck + `BACKEND_URL` build-ARG; proven by four street curls + the cellar-door refusal + browser E2E) |
-| **Parity hardening** (the 409 string pinned + the `/health` lighthouse, both kitchens) | ✅ shipped day-20 (2 features; surfaced 3 latent debts — **20a** is a real members-POST parity crack) |
+| **Parity hardening** (the 409 string pinned + the `/health` lighthouse, both kitchens) | ✅ shipped day-20 (2 features; surfaced 3 latent debts — all resolved day-21) |
+| **Parity closeout** (members-POST parity + compose `/health`; 20a/20b closed, 20c dropped) | ✅ shipped day-21 (the 3 day-20 debts resolved — **20a** the real members-POST crack fixed in both kitchens, **20b** compose now probes `/health`, **20c** dropped as a false alarm) |
 | Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) | ⏳ ahead |
 
 ---

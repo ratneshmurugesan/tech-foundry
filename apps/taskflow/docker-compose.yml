@@ -65,7 +65,10 @@ services:
       # -s silences progress meters so logs stay completely clean
       # test: ["CMD-SHELL", "curl -f -s http://localhost:8000/workspaces || exit 1"]
 
-      test: ["CMD-SHELL","wget -q --spider -T 5 http://127.0.0.1:8000/ || exit 1"]
+      # 20b (ADR-006): probe the dedicated /health liveness probe, NOT the / lighthouse.
+      # /health is a public path (door + key-ring skip it) and answers 200 with no DB
+      # dependency — the correct container-liveness target. / is the landing/menu page.
+      test: ["CMD-SHELL","wget -q --spider -T 5 http://127.0.0.1:8000/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -98,7 +101,10 @@ services:
       db-push: # to serialize behind the schema owner
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/', timeout=5)"]
+      # 20b (ADR-006): probe the dedicated /health liveness probe, NOT the / lighthouse.
+      # Kitchen-identical intent to the ts check above: /health is a public path that
+      # answers 200 with no DB dependency. urlopen raises on 4xx/5xx, so a non-200 fails.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)"]
       interval: 5s
       timeout: 5s
       retries: 5

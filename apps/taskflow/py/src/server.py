@@ -139,25 +139,23 @@ async def delete_workspaces(request: Request, id: str = Path(..., description="T
     return Response(status_code=204)
 @app.post("/workspaces/{id}/members", status_code=201)
 async def invite_member(id: str, body: CreateWorkspaceMember, request: Request):
-    # sub = _sub(request)
-    # if(sub is None):
-    #     raise ForbiddenError("Not a member of this workspace")
+    # The owner invites a member by user_id (product spec); the workspace comes from the
+    # {id} path, not the body. The key-ring (AuthorizeMiddleware) already enforces the
+    # owner role for this route, so no route-level owner check is needed (parity with the
+    # TS kitchen, whose route also relies on the key-ring).
 
-    # existing_ws_member: WorkspaceMember = await repo.find_membership(id, sub)
-    # if(existing_ws_member.role != "owner"):
-    #         raise ForbiddenError("Requires the owner role")
-
+    # Read the existing membership FIRST, outside the write-try, so a real 409 is not
+    # swallowed into a 500 (the find is the only read; the write is the only DB mutation).
     try:
         existing: WorkspaceMember | None = await repo.find_membership(id, body.user_id)
-        if existing is not None:
-            raise ConflictError(f"User {existing.user_id} is already a member of this workspace")
-        return await repo.invite_member(
-            CreateWorkspaceMember(
-                workspace_id=id,
-                user_id=body.user_id,
-                role=body.role
-            )
-        )
+    except Exception as db_error:
+        raise DatabaseCrashError(db_error)
+
+    if existing is not None:
+        raise ConflictError(f"User {existing.user_id} is already a member of this workspace")
+
+    try:
+        return await repo.invite_member(id, body.user_id, body.role)
     except Exception as db_error:
         raise DatabaseCrashError(db_error)
 @app.get("/workspaces/{id}/members", status_code=200)

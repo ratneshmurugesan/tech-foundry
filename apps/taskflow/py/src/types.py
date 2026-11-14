@@ -92,8 +92,10 @@ class UpdateIssue(BaseModel):
         return value
 
 class CreateWorkspaceMember(BaseModel):
-    workspace_id: str | None = Field(default=None, description="workspaceId")
-    user_id: str | None = Field(default=None, description="userId")
+    # workspace_id is NOT in the request body — it comes from the {id} path param (parity
+    # with the TS kitchen's create schema). user_id is required: the owner invites a
+    # *specific* user. role defaults to member.
+    user_id: str = Field(..., description="userId")
     role: Literal["owner", "member"] | None = Field(default="member", description="role")
     
     model_config = ConfigDict(from_attributes=True)
