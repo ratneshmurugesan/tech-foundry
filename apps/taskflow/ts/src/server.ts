@@ -325,6 +325,7 @@ app.get("/workspaces/:id/members", {
 })
 app.post("/workspaces/:id/members", {
     schema: {
+        params: idParamSchema,
         body: createWorkspaceMemberSchema,
         response: {
             201: workspaceMemberSchema,
