@@ -141,7 +141,7 @@ flowchart LR
 
 ---
 
-## 5. What's built vs. what's next (honest state, 2026-11-14)
+## 5. What's built vs. what's next (honest state, 2026-11-19)
 
 | Capability | State |
 |---|---|
@@ -165,7 +165,8 @@ flowchart LR
 | **Full-stack deploy** (single URL, reverse proxy, $0 VM) | ✅ **shipped day-19** (ADR-016 — one-command `deploy/deploy.sh`: Mac → box → street; the web healthcheck + `BACKEND_URL` build-ARG; proven by four street curls + the cellar-door refusal + browser E2E) |
 | **Parity hardening** (the 409 string pinned + the `/health` lighthouse, both kitchens) | ✅ shipped day-20 (2 features; surfaced 3 latent debts — all resolved day-21) |
 | **Parity closeout** (members-POST parity + compose `/health`; 20a/20b closed, 20c dropped) | ✅ shipped day-21 (the 3 day-20 debts resolved — **20a** the real members-POST crack fixed in both kitchens, **20b** compose now probes `/health`, **20c** dropped as a false alarm) |
-| Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) | ⏳ ahead |
+| **Cellar RLS** (per-request identity stamp + non-owner `taskflow_app` role + five row-level policies; the cellar enforces "see only your own") | ✅ **shipped day-22** (ADR-017 — the door stamps the badge, the session carries it via `set_config`, RLS binds the non-owner role; `__doorless__` sentinel for dev/webhook/bootstrap; `ON_ERROR_STOP on` so a half-locked cellar never boots) |
+| K3s/Helm/GitOps (Make it Right) | ⏳ ahead |
 
 ---
 

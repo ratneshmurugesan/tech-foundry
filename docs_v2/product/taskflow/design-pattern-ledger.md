@@ -34,6 +34,7 @@ kitchen = a language track · door = Auth0 · cellar = Postgres · cashier = Raz
 | Adapter (architecture) | the parity wall, ADR-001 | two kitchens, one behavioral contract | run either kitchen; the contract is the invariant |
 | Pure-function core | `assert_role` · `map_fail_reason` · `_is_jws` · `minRoleFor` | the hard logic has no hidden I/O | trivially testable, trivially swappable |
 | State machine | `transition`/`transitionState` in `razorpay.py`/`razorpay.ts` | the subscription lifecycle is rules about what may change to what | add a transition/state by adding a table row; all three edges now fire via the webhook (ADR-015) |
+| RLS (connection-scoped row filter) | `cellar.sql` policies + `set_config` in `db.py`/`db.ts` | the cellar enforces "see only your own" even if a route forgets the hook | swap the scope source (membership → a claim) by editing the policy; the app never writes `WHERE user_id = …` (ADR-017) |
 
 ---
 
@@ -92,6 +93,11 @@ kitchen = a language track · door = Auth0 · cellar = Postgres · cashier = Raz
 - **Where**: `types.py` (Pydantic wire models: `Workspace`, `CreateWorkspace`, `UpdateWorkspace`, …) is a *different type* from `models.py` (SQLAlchemy: `WorkspaceModel`, …). The bridge is `model_config = ConfigDict(from_attributes=True)` — *"the bridge between SQLAlchemy models and Pydantic API types"* — and `repository` returns `Workspace.model_validate(row)`.
 - **Why**: the database schema and the API contract evolve on different clocks. Keeping them as separate types means a schema change doesn't silently reshape the API.
 - **Swap story**: change the DB columns or the JSON shape **independently**; the only coupling is the `model_validate` bridge. Note `update_workspace(id, changes: dict)` takes *"a plain dict, never the pydantic model"* — the route does `body.model_dump(exclude_unset=True)`, so even the update path keeps the two layers apart.
+
+### RLS (connection-scoped row filter)
+- **Where**: `cellar.sql` — a non-owner `taskflow_app` role, `SECURITY DEFINER` helpers (`is_member_of` / `is_owner_of` / `ws_of_issue`), and five policies (`ws_isolation` … `plan_isolation`) armed with `ENABLE ROW LEVEL SECURITY`. The door stamps the verified `sub` into a per-request identity; the session opens with `set_config('app.current_user_id', …, false)` so every statement carries the caller's badge.
+- **Why**: "see only your own rows" must survive a forgotten `WHERE` in a new route. The app-level hook (ADR-012) is the fast first line; RLS is the last line — the same guarantee, enforced by the cellar itself. Fail-closed: an unset identity is `NULL` and matches no policy → 0 rows, never a silent leak. The `__doorless__` sentinel opens the shelves only for dev, the webhook, and the create-bootstrap.
+- **Swap story**: the row filter is a property of the *connection*, not the query — change the scope source (membership → a claim, or a new tenant dimension) by editing the policy, and the routes, repository, and tests keep their shape. `ENABLE` (not `FORCE`) keeps the owner (`postgres`) bypassing for `db-push`/init/admin.
 
 ## The wire (`server.py` + `errors.py` + `error_handlers.py`)
 

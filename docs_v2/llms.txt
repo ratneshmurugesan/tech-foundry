@@ -10,10 +10,10 @@
 
 ## NOW
 *(derived on every run — never hand-edited)*
-- last: day-21 (2026-11-14 — parity-closeout) → notes/day-21-parity-closeout-2026-11-14-1316.md
+- last: day-22 (2026-11-19 — cellar-rls) → notes/day-22-cellar-rls-2026-11-19-1346.md
 - git: dev
 - open debts: none
-- next: Multi-tenant RLS, K3s/Helm/GitOps (Make it Right) … → build ledger §5 (product/taskflow/taskflow-build.md)
+- next: K3s/Helm/GitOps (Make it Right) … → build ledger §5 (product/taskflow/taskflow-build.md)
 
 ## Docs map (everything in this tree)
 - [README](README.md): what lives where + the EOD procedure
@@ -26,12 +26,14 @@
 - [AGENTS.md](../AGENTS.md): the session-start pointer (rules 1/4) — a new agent session reads this first
 
 ## ADRs (newest first — *status tells you whether it's still law*)
+- [ADR-017 cellar-rls](adrs/adr-017-cellar-rls.md): *status: Active*
 - [ADR-016 one-command-deploy](adrs/adr-016-one-command-deploy.md): *status: Active*
 - [ADR-015 razorpay-webhooks](adrs/adr-015-razorpay-webhooks.md): *status: Active*
 - [ADR-014 razorpay-checkout](adrs/adr-014-razorpay-checkout.md): *status: Active*
 - [ADR-013 docs-v2-home](adrs/adr-013-docs-v2-home.md): *status: Active*
 
 ## Day notes (newest first)
+- [day-22-cellar-rls](notes/day-22-cellar-rls-2026-11-19-1346.md): *2026-11-19*
 - [day-21-parity-closeout](notes/day-21-parity-closeout-2026-11-14-1316.md): *2026-11-14*
 - [day-20-parity-hardening](notes/day-20-parity-hardening-2026-11-12-1836.md): *2026-11-12*
 - [day-19-full-stack-deploy](notes/day-19-full-stack-deploy-2026-11-11-1528.md): *2026-11-11*
