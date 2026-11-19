@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { getDb, issues, paymentPlans, projects, workspaceMembers, workspaces } from "./db";
+import { getDb, getClient, makeRequestDb, issues, paymentPlans, projects, workspaceMembers, workspaces } from "./db";
+import { DOORLESS } from "./identity";
 import { Issue, Plan, Project, Workspace, WorkspaceMember } from "./types";
 import generateId from "./ids";
 import { transition } from "./razorpay";
@@ -49,27 +50,37 @@ class PostgresRepository {
     }
 
     async saveWorkspaceWithOwner(name: string, sub: string): Promise<Workspace> {
-        const db = getDb()
-        const id = generateId()
+        // Runs under the DOORLESS sentinel: the workspace doesn't exist yet, so is_member_of is
+        // false and the WITH CHECK would reject both INSERTs — the sentinel opens them (cellar.sql).
+        // A dedicated connection (not the request's stamped one) keeps the request's sub-stamp
+        // intact for the RBAC key-ring that runs before this. reserve() = a dedicated connection.
+        const conn = await getClient().reserve()
+        await conn.unsafe("SELECT set_config('app.current_user_id', $1, false)", [DOORLESS])
+        const db = makeRequestDb(conn)
+        try {
+            const id = generateId()
+            // Creator is minted as owner in ONE transaction — closes the orphan-creator window of
+            // saveWorkspace + a separate member insert as two commits (mirrors py save_workspace_with_owner).
+            const rows = await db.transaction(async (tx) => {
+                const ws = await tx
+                    .insert(workspaces)
+                    .values({ id, name })
+                    .returning()
+                await tx
+                    .insert(workspaceMembers)
+                    .values({ id: generateId(), workspace_id: id, user_id: sub, role: "owner" })
+                return ws
+            })
 
-        // Creator is minted as owner in ONE transaction — closes the orphan-creator window of
-        // saveWorkspace + a separate member insert as two commits (mirrors py save_workspace_with_owner).
-        const rows = await db.transaction(async (tx) => {
-            const ws = await tx
-                .insert(workspaces)
-                .values({ id, name })
-                .returning()
-            await tx
-                .insert(workspaceMembers)
-                .values({ id: generateId(), workspace_id: id, user_id: sub, role: "owner" })
-            return ws
-        })
-
-        return {
-            id: rows[0].id,
-            name: rows[0].name,
-            plan_tier: rows[0].plan_tier as string,
-            created_at: rows[0].created_at as Date
+            return {
+                id: rows[0].id,
+                name: rows[0].name,
+                plan_tier: rows[0].plan_tier as string,
+                created_at: rows[0].created_at as Date
+            }
+        } finally {
+            await conn.unsafe("SELECT set_config('app.current_user_id', '', false)").catch(() => {})
+            conn.release()
         }
     }
 

@@ -22,6 +22,17 @@ fastify.setSerializerCompiler(serializerCompiler)
 const app = fastify
     .addHook("onRequest", doorHook)
     .addHook("onRequest", authorizeHook)
+    // Per-request RLS connection cleanup. `onResponse` is the LAST request-lifecycle hook
+    // (fires after the response is sent, even on errors) — the correct place to release the
+    // connection the door reserved. NOT `onClose`: that is a *server* lifecycle hook that fires
+    // on fastify.close(), so it never runs per-request and the pool silently leaks (ADR-017).
+    .addHook("onResponse", async (req) => {
+        const conn = (req as any).rlsConn;
+        if (conn) {
+            await conn.unsafe("SELECT set_config('app.current_user_id', '', false)");
+            conn.release();
+        }
+    })
     .withTypeProvider<ZodTypeProvider>()
 
 // Registering custom semantic error handler

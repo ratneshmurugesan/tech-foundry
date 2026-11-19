@@ -1,10 +1,11 @@
 from typing import List, Optional
-from .db import get_session
+from .db import get_session, async_session
 from .models import WorkspaceModel, ProjectModel, IssueModel, WorkspaceMemberModel, PaymentPlansModel
 from .types import Workspace, Project, Issue, WorkspaceMember, Plan
 from .razorpay import transition
 from .ids import generate_id
 from sqlalchemy import select, update, and_
+from .identity import DOORLESS, app_identity
 
 """
 PostgresRepository — replaces InMemoryRepository.
@@ -41,27 +42,32 @@ class PostgresRepository:
             return Workspace.model_validate(model)
         finally:
             await session.close()
+
     async def save_workspace_with_owner(self, name: str, sub: str) -> Workspace:
-        """Create the workspace AND mint the creator as owner in ONE transaction — closes the orphan-creator window of save_workspace + mint_owner as two commits."""
+        """Create the workspace AND mint the creator as owner in ONE transaction — closes the
+        orphan-creator window of save_workspace + mint_owner as two commits. Runs under the
+        DOORLESS sentinel: the workspace doesn't exist yet, so is_member_of is false and the
+        WITH CHECK would reject both INSERTs — the sentinel opens them (cellar.sql, Step 4)."""
         ws_id = generate_id()  # resolved upfront so the FK below holds the real value
-        session = await get_session()
+        session = await get_session(DOORLESS)
         try:
-            model = WorkspaceModel(id=ws_id, name=name)
-            session.add(model)
-            await session.flush()  # force the parent row into the transaction BEFORE the dependent member row
-            session.add(
-                WorkspaceMemberModel(
-                    id=generate_id(),
-                    workspace_id=ws_id,
-                    user_id=sub,
-                    role="owner"
+            async with session.begin():
+                model = WorkspaceModel(id=ws_id, name=name)
+                session.add(model)
+                await session.flush()  # force the parent row into the transaction BEFORE the dependent member row
+                session.add(
+                    WorkspaceMemberModel(
+                        id=generate_id(),
+                        workspace_id=ws_id,
+                        user_id=sub,
+                        role="owner"
+                    )
                 )
-            )
-            await session.commit()
             await session.refresh(model)
             return Workspace.model_validate(model)
         finally:
             await session.close()
+            
     async def update_workspace(self, id: str, changes: dict) -> Workspace:
         """The route hands in body.model_dump(exclude_unset=True) — a plain dict, never the pydantic model."""
         session = await get_session()

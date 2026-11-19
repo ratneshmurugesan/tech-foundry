@@ -18,6 +18,7 @@ from jwt.exceptions import (
     InvalidSignatureError
 )
 from .constants import ALLOWED_DOMAINS, PUBLIC_PATHS
+from .identity import app_identity, DOORLESS
 
 # JWKS cache: bare-domain -> {kid: jwk}. Re-fetches exactly once on an unknown kid.
 _jwks_cache: dict[str, dict] = {}
@@ -94,6 +95,9 @@ class AuthenticateBadgeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         tenant = os.environ.get("AUTH0_DOMAIN")
         if not tenant or request.url.path in PUBLIC_PATHS:
+            # Doorless dev + public paths (the webhook) run under the sentinel: RLS opens
+            # everything for them (cellar.sql). Without this stamp they'd be fail-closed (0 rows).
+            app_identity.set(DOORLESS)
             return await call_next(request)  # doorless-auth or a public path
 
         auth_header = request.headers.get("authorization")
@@ -113,7 +117,9 @@ class AuthenticateBadgeMiddleware(BaseHTTPMiddleware):
         audience = os.environ.get("AUTH0_AUDIENCE") or "foundry-taskflow-api-aud"
 
         try:
-            request.state.user = verify_badge(token, tenant, audience)
+            user = verify_badge(token, tenant, audience)
+            request.state.user = user
+            app_identity.set(user.get("sub", ""))  # stamp the cellar identity (RLS binds to it)
         except UnauthorizedError as err:
             return _envelope(err.message)
         except Exception:

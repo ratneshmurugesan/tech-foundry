@@ -35,7 +35,9 @@ services:
     ports:
       - "8000:8000"
     environment: 
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/taskflow
+      # taskflow_app (NOT postgres): a non-owner role, so Postgres RLS binds it (cellar.sql).
+      # Connecting as postgres (superuser + table owner) would BYPASS RLS entirely.
+      DATABASE_URL: postgres://taskflow_app:postgres@postgres:5432/taskflow
       CI: "true" # Fix: Tells pnpm to bypass the interactive TTY confirmation prompt
       AUTH0_DOMAIN: dev-qr8x8ecg3nfb603i.uk.auth0.com
       AUTH0_AUDIENCE: https://dev-qr8x8ecg3nfb603i.uk.auth0.com/api/v2/
@@ -56,6 +58,9 @@ services:
         condition: service_healthy
       db-push:
         condition: service_completed_successfully
+      cellar-setup:
+        condition: service_completed_successfully
+
     healthcheck:
       # Uses wget (built into Alpine) to probe the endpoint
       # test: [ "CMD-SHELL", "wget" , "--no-verbose", "--tries=1", "--timeout=5", "--spider", "http://localhost:8000/workspaces"]
@@ -78,7 +83,8 @@ services:
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/taskflow
+      # taskflow_app (NOT postgres): a non-owner role, so Postgres RLS binds it (cellar.sql).
+      DATABASE_URL: postgresql+asyncpg://taskflow_app:postgres@postgres:5432/taskflow
       AUTH0_DOMAIN: dev-qr8x8ecg3nfb603i.uk.auth0.com
       AUTH0_AUDIENCE: https://dev-qr8x8ecg3nfb603i.uk.auth0.com/api/v2/
     env_file:
@@ -99,6 +105,8 @@ services:
       postgres:
         condition: service_healthy
       db-push: # to serialize behind the schema owner
+        condition: service_completed_successfully
+      cellar-setup:
         condition: service_completed_successfully
     healthcheck:
       # 20b (ADR-006): probe the dedicated /health liveness probe, NOT the / lighthouse.
@@ -166,6 +174,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: "no"
+  cellar-setup:
+    image: postgres:15  # reuse the postgres image — it has the `psql` client
+    environment:
+      PGPASSWORD: postgres   # the psql CLIENT reads PGPASSWORD (not POSTGRES_PASSWORD, which the
+                             # server uses to set its own password). Without it, a TCP connect
+                             # would hang on an interactive password prompt a one-shot can't answer.
+    volumes:
+      - ./cellar.sql:/cellar.sql:ro # :ro = read-only, the container only reads it
+    # -h postgres is load-bearing: without it psql connects to a Unix socket in ITS OWN
+    # container (no Postgres there) => "No such file or directory". -h routes it over TCP
+    # to the `postgres` service by name, exactly like db-push's DATABASE_URL @postgres:5432.
+    command: psql -U postgres -h postgres -d taskflow -f /cellar.sql # run the file, as superuser
+    depends_on:
+      db-push:
+        condition: service_completed_successfully # ← ordering gotcha, below
     restart: "no"
 
 volumes:

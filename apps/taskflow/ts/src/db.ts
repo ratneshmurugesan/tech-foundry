@@ -1,6 +1,7 @@
 import { index, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import postgres, { Sql } from 'postgres'
-import { drizzle } from 'drizzle-orm/postgres-js'
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
+import { requestDb } from './identity';
 
 export const workspaces = pgTable("workspaces", {
     id: text("id").primaryKey(),
@@ -44,16 +45,47 @@ export const paymentPlans = pgTable("payment_plans", {
 })
 
 
-let db: ReturnType<typeof drizzle> | undefined;
+let client: Sql | undefined;
+let db: PostgresJsDatabase<any> | undefined;
 
 export async function initDb() {
-    const url = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/taskflow";
-    const client = postgres(url)
+    // taskflow_app (NOT postgres): a non-owner role, so Postgres RLS binds it (cellar.sql).
+    const url = process.env.DATABASE_URL || "postgres://taskflow_app:postgres@postgres:5432/taskflow";
+    client = postgres(url)
     db = drizzle(client)
     console.log("TypeScript DB connected")
 }
 
-export function getDb() {
+// The shared pool — the door grabs a DEDICATED connection from it per request, stamps it with
+// the identity, and binds it via AsyncLocalStorage. The pool itself is never stamped (shared).
+export function getClient() {
+    if (!client) throw new Error("Database not initialized. Call initDb() first.")
+    return client
+}
+
+// The door checks this before stamping: the DB-free contract tests (lighthouse, doorless,
+// badge, validation) build the app WITHOUT initDb(), and the door must stay open for them —
+// parity with the PY door, which never touches the DB (the stamp is deferred to get_session()).
+// In a real deployment initDb() has run, so this is always true and the door stamps as designed.
+export function isDbInitialized(): boolean {
+    return client !== undefined;
+}
+
+// Build a drizzle instance bound to a dedicated (stamped) connection — one per request.
+// reserve() hands out a bare Sql(handler) that has NO .options, but drizzle's construct()
+// unconditionally reads client.options.parsers/serializers. Attach a CLONE of the pool's
+// options so construct() runs; each reserve() is a fresh object, so drizzle's
+// transparent-parser mutation can't leak into the shared pool. The reserved connection
+// routes queries to the real pooled connection (its own options), so parsing is unaffected.
+export function makeRequestDb(conn: any): PostgresJsDatabase<any> {
+    if (!conn.options) {
+        const o = getClient().options;
+        conn.options = { ...o, parsers: { ...o.parsers }, serializers: { ...o.serializers } };
+    }
+    return drizzle(conn)
+}
+
+export function getDb(): PostgresJsDatabase<any> {
     if (!db) throw new Error("Database not initialized. Call initDb() first.")
-    return db;
+    return requestDb.getStore() ?? db;
 }
