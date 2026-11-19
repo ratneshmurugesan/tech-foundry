@@ -223,15 +223,33 @@ Each template maps to real OSS patterns from the 12-repo analysis. You'll build 
 **Bar**: 80%+ test coverage, DDD patterns applied, deployed on K3s with GitOps, multi-tenant with RLS.
 **Mindset**: "Look at how OSS solved this. Apply their patterns. Every bug from Phase 1 teaches a concept."
 
+### Why Phase 2 is where the hard concepts live
+
+Phase 1 was *deliberately* ugly — no tests, flat CRUD, a monolith, `docker compose up` on a VM. That was a **choice**, not an accident. Phase 2's entire job is to **replace each Phase 1 shortcut with the correct, durable version**. That's why every feature below reads *intermediate-to-advanced*: this is the phase where you pay the architecture bill. **Phase 3 (Fast) is reserved for optimization** (p99, autoscaling, observability, DR) — *not* correctness — so the hard concepts are front-loaded here by design.
+
+| Phase 1 shortcut (Work) | Phase 2 replacement (Right) | Why it's *here* and not later |
+|---|---|---|
+| No tests | 80+ unit + 30+ integration/E2E | You can't safely refactor without a net; "no tests" was a Phase 1 *choice* |
+| Flat CRUD, no domain model | DDD: Entities, VOs, Aggregates | A flat CRUD app rots as it grows; fix the shape *before* it's too big |
+| Tenant filtering in app code (or none) | Postgres **RLS** | Multi-tenant isolation belongs in the DB, not scattered app code |
+| `docker compose up` on a VM | K3s + Helm + Traefik + ArgoCD GitOps | A VM + compose doesn't self-heal/scale; K8s is the durable way to run it |
+| Monolith | Split into services (Identity, SaaS) | Monolith is fine to *start*; bounded services are the *right* shape to *grow* |
+| Synchronous / no messaging | SQS + DLQ + SNS | Reliable async; a DLQ = never silently lose a message |
+| "fire and hope" events | **Outbox** pattern | Transactional guarantee: the event ships *iff* the write commits |
+| No cross-service txn | **Sagas** + compensation | Distributed txns can't be atomic; sagas give coordinated rollback |
+| No failure handling | Circuit breakers, retries, bulkheads | In a distributed system failure is the *norm*; resilience stops cascades |
+
+> **The escape valve** (the plan's own): the **OSS Reference** column is the ramp — study the referenced repo for ~30 min, build the 80% version. And you can **re-sequence** — finish Deepening 1 fully before touching Deepening 2. Nothing here is parallel; each deepening stands on the last.
+
 ### Deepening 1: Quality (Weeks 7-10)
 **Goal**: Make what you built actually good. Add tests, proper DDD, multi-tenancy, basic observability.
 
-| Week | What You Add | OSS Reference | Intermediate Concepts |
-|---|---|---|---|
-| 7 | Unit tests: 80+ tests | OpenHands (mock-dependency pattern) | Vitest, pytest, `vi.mock()`, `respx` |
-| 8 | Integration + E2E: 30+ tests | Discourse (TurboTests), Playwright | Database testing, Playwright E2E |
-| 9 | Proper DDD: Entities, Value Objects, Aggregates | Plane (domain-driven apps) | Bounded contexts, consistency boundaries |
-| 10 | Multi-tenancy: RLS, workspace isolation | Plane (`workspace_id` everywhere) | PostgreSQL RLS policies, row-level security |
+| Week | What You Add | OSS Reference | Intermediate Concepts | Why (one line) |
+|---|---|---|---|---|
+| 7 | Unit tests: 80+ tests | OpenHands (mock-dependency pattern) | Vitest, pytest, `vi.mock()`, `respx` | You can't refactor a Phase-1 monolith without a net; tests are the safety floor for everything after |
+| 8 | Integration + E2E: 30+ tests | Discourse (TurboTests), Playwright | Database testing, Playwright E2E | Unit tests miss the seams (DB, HTTP, middleware); integration/E2E prove the *real* paths |
+| 9 | Proper DDD: Entities, Value Objects, Aggregates | Plane (domain-driven apps) | Bounded contexts, consistency boundaries | Flat CRUD rots as it grows; a domain model fixes the *shape* before it's too big to move |
+| 10 | Multi-tenancy: RLS, workspace isolation | Plane (`workspace_id` everywhere) | PostgreSQL RLS policies, row-level security | Tenant isolation in app code is a hole; RLS enforces it in the DB where it can't be bypassed |
 
 **What you learn**: Test patterns from OSS, DDD fundamentals, PostgreSQL RLS, proper domain modeling.
 
@@ -242,12 +260,12 @@ Each template maps to real OSS patterns from the 12-repo analysis. You'll build 
 ### Deepening 2: Infrastructure (Weeks 11-14)
 **Goal**: Make deployment proper. K3s, Helm, Traefik, GitOps.
 
-| Week | What You Add | OSS Reference | Intermediate Concepts |
-|---|---|---|---|
-| 11 | Docker multi-stage builds | Streamlit (packaging) | Small images, proper layers |
-| 12 | K3s on $0 Free Tier VM, Helm charts | — | Kubernetes basics, Helm templating |
-| 13 | Traefik ingress, TLS | — | Reverse proxy, Let's Encrypt |
-| 14 | ArgoCD GitOps | — | Auto-deploy on merge |
+| Week | What You Add | OSS Reference | Intermediate Concepts | Why (one line) |
+|---|---|---|---|---|
+| 11 | Docker multi-stage builds | Streamlit (packaging) | Small images, proper layers | Fat images bloat every deploy; multi-stage keeps the runtime lean and the build reproducible |
+| 12 | K3s on $0 Free Tier VM, Helm charts | — | Kubernetes basics, Helm templating | A VM + compose doesn't self-heal or scale; K8s is the durable way to run it, and Helm makes it declarative |
+| 13 | Traefik ingress, TLS | — | Reverse proxy, Let's Encrypt | One edge for routing + TLS; you stop hand-wiring ports and certs per service |
+| 14 | ArgoCD GitOps | — | Auto-deploy on merge | Manual deploys drift; GitOps makes the git repo the single source of truth for what's running |
 
 **What you learn**: Kubernetes, Helm, Traefik, GitOps, proper CI/CD pipelines.
 
@@ -258,13 +276,13 @@ Each template maps to real OSS patterns from the 12-repo analysis. You'll build 
 ### Deepening 3: Distributed (Weeks 15-20)
 **Goal**: Split monolith into services. Add messaging, resilience, sagas.
 
-| Week | What You Add | OSS Reference | Advanced Concepts |
-|---|---|---|---|
-| 15-16 | Split: Identity service, SaaS service | Backend monorepo study (10 services) | Service boundaries, bounded contexts |
-| 17 | SQS + DLQ + SNS | Document Worker (priority queues) | Reliable messaging, dead letter queues |
-| 18 | Outbox pattern | Campaign API (event publishing) | Transactional outbox, exactly-once semantics |
-| 19 | Sagas, compensation | E-commerce template (order fulfillment) | Distributed transactions, rollback |
-| 20 | Circuit breakers, resilience | — | Retry policies, fallbacks, bulkheads |
+| Week | What You Add | OSS Reference | Advanced Concepts | Why (one line) |
+|---|---|---|---|---|
+| 15-16 | Split: Identity service, SaaS service | Backend monorepo study (10 services) | Service boundaries, bounded contexts | A monolith is fine to start; bounded services are the *right* shape to grow and scale independently |
+| 17 | SQS + DLQ + SNS | Document Worker (priority queues) | Reliable messaging, dead letter queues | Synchronous calls cascade failures; a queue decouples services and a DLQ means nothing is silently lost |
+| 18 | Outbox pattern | Campaign API (event publishing) | Transactional outbox, exactly-once semantics | Fire-and-forget events can be lost on a crash; the outbox guarantees the event ships *iff* the write commits |
+| 19 | Sagas, compensation | E-commerce template (order fulfillment) | Distributed transactions, rollback | Distributed txns can't be atomic; a saga gives you coordinated rollback when one step fails |
+| 20 | Circuit breakers, resilience | — | Retry policies, fallbacks, bulkheads | In a distributed system failure is the *norm*; breakers + retries + bulkheads stop one service dragging down the rest |
 
 **What you learn**: Microservice architecture, event-driven design, distributed transactions, resilience patterns.
 
@@ -283,13 +301,13 @@ Each template maps to real OSS patterns from the 12-repo analysis. You'll build 
 ### Deepening 4: Production (Weeks 21-28)
 **Goal**: Make it survive in the real world. Observability, security, performance, DR.
 
-| Week | What You Add | OSS Reference | Advanced Concepts |
-|---|---|---|---|
-| 21-22 | EKS migration | — | Managed K8s, IAM roles, VPC |
-| 23-24 | Full observability: OpenTelemetry, Jaeger, Prometheus, Grafana, Loki | CNCF landscape deep-dive | Distributed tracing, metrics, log aggregation |
-| 25 | Security: Vault, secrets rotation | OpenHands (security-first) | Secrets management, zero trust |
-| 26 | Performance: benchmarks, budgets | Lighthouse (deterministic audits) | Load testing, p99 latency |
-| 27-28 | Disaster recovery: backup/restore | — | Point-in-time recovery, RTO/RPO |
+| Week | What You Add | OSS Reference | Advanced Concepts | Why (one line) |
+|---|---|---|---|---|
+| 21-22 | EKS migration | — | Managed K8s, IAM roles, VPC | K3s proved the model; EKS is the managed, production-grade version with IAM + VPC baked in |
+| 23-24 | Full observability: OpenTelemetry, Jaeger, Prometheus, Grafana, Loki | CNCF landscape deep-dive | Distributed tracing, metrics, log aggregation | You can't fix what you can't see; tracing + metrics + logs turn guesses into measurements |
+| 25 | Security: Vault, secrets rotation | OpenHands (security-first) | Secrets management, zero trust | Secrets in env vars leak and never rotate; Vault centralizes and rotates them |
+| 26 | Performance: benchmarks, budgets | Lighthouse (deterministic audits) | Load testing, p99 latency | Optimizing blind wastes effort; budgets + benchmarks tell you what actually matters (p99) |
+| 27-28 | Disaster recovery: backup/restore | — | Point-in-time recovery, RTO/RPO | It's not *if* it goes down, *when*; DR drills prove your RTO/RPO are real, not aspirational |
 
 **What you learn**: Cloud-native production, full observability stack, security hardening, disaster recovery.
 
@@ -298,13 +316,13 @@ Each template maps to real OSS patterns from the 12-repo analysis. You'll build 
 ### Deepening 5: Advanced (Weeks 29-36)
 **Goal**: Master the hard stuff. Event sourcing, CQRS, plugins, AI, open source.
 
-| Week | What You Add | OSS Reference | Advanced Concepts |
-|---|---|---|---|
-| 29-30 | Event sourcing | Lighthouse (audit trail) | Event store, projections, snapshots |
-| 31-32 | CQRS, read models | Analytics template | Command/query separation, materialized views |
-| 33-34 | AI integration, MCP servers | OpenHands (AI agents) | LLM tool use, MCP protocol |
-| 35 | Plugin architecture | Storybook, Lighthouse (plugins) | Extensibility, hook systems |
-| 36 | Open source release | All 12 repos (AGENTS.md, CONTRIBUTING.md) | Documentation as code, community setup |
+| Week | What You Add | OSS Reference | Advanced Concepts | Why (one line) |
+|---|---|---|---|---|
+| 29-30 | Event sourcing | Lighthouse (audit trail) | Event store, projections, snapshots | Mutable rows lose history; an event store makes the audit trail and time-travel free |
+| 31-32 | CQRS, read models | Analytics template | Command/query separation, materialized views | Reads and writes scale differently; separating them lets you tune each independently |
+| 33-34 | AI integration, MCP servers | OpenHands (AI agents) | LLM tool use, MCP protocol | LLM tool use is the new integration surface; MCP is the protocol that makes it standard |
+| 35 | Plugin architecture | Storybook, Lighthouse (plugins) | Extensibility, hook systems | Hooks + a plugin system let users extend the product without you shipping every feature |
+| 36 | Open source release | All 12 repos (AGENTS.md, CONTRIBUTING.md) | Documentation as code, community setup | A real product with docs + community setup is the proof the foundry can sustain a 10-year project |
 
 **What you learn**: Event sourcing, CQRS, AI agent patterns, plugin systems, open source maintenance.
 
