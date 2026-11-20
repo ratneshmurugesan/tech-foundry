@@ -35,6 +35,7 @@
 │  EVENING (closeout) — ~5 min, the 6 EOD steps                   │
 │                                                                 │
 │  1. Note   — 3–5 lines: built / didn't / decisions / debt       │
+│              + Terminal Log appendix (raw commands, §below)     │
 │  2. ADR    — only if a real decision was made (12 lines)        │
 │  3. Debt   — one row in debt.md (add / flip / prune on close)   │
 │  4. Roadmap— one line in build ledger §5 (taskflow-build.md)    │
@@ -94,6 +95,47 @@ Everything else is the actual work.
 
 ---
 
+## Terminal Log (the note's command appendix)
+
+> **Rule 12, operationalized.** Each day note carries a `## Terminal Log`
+> section: the raw commands I ran that day, in order. A *transcript*, not
+> prose — it doesn't count against the 3–5-line note budget.
+> **This file holds the template and conventions only. Real commands live
+> in that day's note file, never here.**
+
+### Template (copy the shape into each day note)
+
+````markdown
+## Terminal Log
+> Day N · YYYY-MM-DD · my terminal · start HH:MM → end HH:MM
+
+### HH:MM — start of Day N terminal use
+
+**step name**
+```bash
+$ raw command   # outcome   ✓ = did its job
+```
+
+### HH:MM — end of Day N terminal use
+````
+
+### Conventions
+
+- **Raw, as typed.** Exact command line, grouped under a bold step name.
+- **Outcome inline.** `# 200 ✓`, `# 29 passed ✓`, `# 404 (expected)`.
+  The `✓` marks commands that *did their job*. Failed / unexpected commands
+  are logged with their error — no ✓.
+- **Start / end markers.** One `date` call at first and last command. Real timestamp.
+- **Spread, don't batch.** Append after each command-bearing turn. The note
+  file persists; a dead session loses nothing already written.
+- **Cross-day.** Work-day flips → close prior note (end marker), open new
+  (start marker). Long async command spanning days: log under the day it
+  started, add `→ continued Day N+1`.
+- **Scope.** My terminal only. Instrumentation (`date`, the flush edit) is meta.
+- **Repeats.** Identical commands in a row → `×N`, one outcome.
+
+---
+
 ## The time budget (where the minutes go)
 
 | Phase | v1 (old) | v2 (now) | Saved |
@@ -133,7 +175,7 @@ the whole chalkboard by hand. v2 just stamps the board.
 | `llms.txt` | The manifest (generated) | You never edit it; you run the script |
 | `gen_llms.sh` | The generator | You run it at EOD step 6 |
 | `debt.md` | The debt ledger | EOD step 3 (one row) |
-| `notes/day-NN-…` | Today's note | EOD step 1 (3–5 lines) |
+| `notes/day-NN-…` | Today's note + Terminal Log | EOD step 1 (3–5 lines + command appendix) |
 | `adrs/adr-NNN-…` | A decision | EOD step 2 (only if a decision) |
 | `product/taskflow/design-pattern-ledger.md` | The pattern ledger | EOD step 5 (only if a new pattern landed) |
 | `../docs/roadmaps/v4/master.md` | The roadmap | EOD step 4 (one line) |
